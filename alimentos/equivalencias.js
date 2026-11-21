@@ -13,6 +13,9 @@
   "use strict";
 
   const ETIQUETAS = { kcal: "kcal", proteinas: "proteína", hc: "hidratos", grasas: "grasa" };
+  const ICONO_AJUSTE = '<svg class="eq-aviso-icono" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path class="eq-aviso-triangulo" d="M12 3 2 21h20L12 3Z"/>' +
+    '<path class="eq-aviso-signo" d="M12 9v5m0 3v.1"/></svg>';
   // Los grupos de intercambio se nombran para el deportista, no con la jerga de la base.
   const ETIQUETAS_GRUPO = {
     "HC comida / guarnición": "Hidratos para comida o cena",
@@ -68,13 +71,20 @@
   const ORDEN_MACROS = ["kcal", "proteinas", "hc", "grasas"];
   const PESO_PRIORIDAD = { Alta: 0, Media: 1, Baja: 2 };
   const PASO = 5; // los gramos se redondean a multiplos de 5: nadie pesa 137 g de arroz
+  // Margenes aprobados por Mario el 2026-11-08, sobre la racion final redondeada.
+  const MARGENES = {
+    kcal: { minimo: 30, proporcion: 0.2 },
+    grasas: { minimo: 3, proporcion: 0.3 },
+    proteinas: { minimo: 5, proporcion: 0.2 },
+    hc: { minimo: 5, proporcion: 0.2 },
+  };
   // Cada bloque ensena sus primeras alternativas y guarda el resto tras su propio boton: un
   // grupo de proteina magra trae 40 y, con un corte unico, el ultimo bloque no se veia.
   const POR_BLOQUE = 4;
   const SUGERENCIAS = 8; // alimentos que propone el buscador mientras se escribe
   const SIN_RESULTADO =
     "No lo encuentro en la calculadora. Si es fruta o verdura, se cambia por ración: lo " +
-    "tienes en «Intercambios por ración». Si es otra cosa, prueba con otro nombre o pregúntame.";
+    "tienes en «Frutas y verduras». Si es otra cosa, prueba con otro nombre o pregúntame.";
 
   const redondear = (valor, decimales) => {
     const factor = 10 ** decimales;
@@ -118,6 +128,19 @@
     };
   }
 
+  /** Diferencias que superan su margen; el macro igualado no se clasifica. */
+  function ajustesDe(origen, cantidadOrigen, destino, cantidadDestino, macro) {
+    return ORDEN_MACROS.filter((m) => m !== macro).flatMap((m) => {
+      const valorOrigen = (cantidadOrigen * origen[m]) / 100;
+      const delta = (cantidadDestino * destino[m]) / 100 - valorOrigen;
+      const margen = Math.max(MARGENES[m].minimo, valorOrigen * MARGENES[m].proporcion);
+      // Admitir el limite exacto aunque la multiplicacion introduzca ruido binario.
+      return Math.abs(delta) - margen > 1e-9
+        ? [{ macro: m, delta: redondear(delta, m === "kcal" ? 0 : 1) }]
+        : [];
+    });
+  }
+
   /**
    * Las alternativas del grupo del origen y de su grupo afin, con su cantidad equivalente y
    * lo que se desvian.
@@ -149,13 +172,15 @@
           prioridad: a.prioridad,
           cantidad: equivalente,
           kcal: valores.kcal,
+          ajustes: ajustesDe(origen, cantidad, a, equivalente, macro),
           misma_familia: mismoGrupo && a.familia === origen.familia,
           afin: !mismoGrupo,
           diferencias: ORDEN_MACROS.filter((m) => m !== macro).map((m) => ({
             macro: m,
             origen: valoresOrigen[m],
             destino: valores[m],
-            delta: redondear(valores[m] - valoresOrigen[m], m === "kcal" ? 0 : 1),
+            delta: redondear((equivalente * a[m]) / 100 - (cantidad * origen[m]) / 100,
+              m === "kcal" ? 0 : 1),
           })),
         };
       })
@@ -260,6 +285,11 @@
           `<span class="eq-alimento">${escapar(a.nombre)}${marca}</span>` +
           `<span class="eq-gramos">${a.cantidad} g</span>` +
           `<span class="eq-detalle">${_detalle(a)}</span>` +
+          (a.ajustes && a.ajustes.length
+            ? `<span class="eq-ajuste">${ICONO_AJUSTE}Requiere ajuste: ${a.ajustes.map((d) =>
+              `${cifra(d.delta, d.macro === "kcal" ? 0 : 1, true)} ${d.macro === "kcal" ? "kcal" : `g de ${ETIQUETAS[d.macro]}`}`
+            ).join("; ")}.</span>`
+            : "") +
           "</li>"
         );
       })
@@ -271,10 +301,7 @@
    * Las alternativas en bloques: su familia, el resto de su grupo y el grupo afin. Cada bloque
    * ensena sus primeras y guarda el resto tras su propio boton.
    */
-  function bloques(filas, origen) {
-    if (!filas.length) {
-      return '<p class="eq-vacio">Este alimento todavía no tiene alternativas con macros en la base.</p>';
-    }
+  function _familias(filas, origen) {
     const suyas = filas.filter((a) => a.misma_familia);
     const resto = filas.filter((a) => !a.misma_familia && !a.afin);
     const afines = filas.filter((a) => a.afin);
@@ -285,12 +312,34 @@
         lista.length > POR_BLOQUE
           ? `<p class="eq-mas"><button type="button" data-eq-mas>Ver ${lista.length - POR_BLOQUE} más</button></p>`
           : "";
-      partes.push(`<div class="eq-bloque"><h3>${escapar(titulo)}</h3>${_lista(lista)}${mas}</div>`);
+      partes.push(`<div class="eq-bloque"><h4>${escapar(titulo)}</h4>${_lista(lista)}${mas}</div>`);
     };
     anadir(origen.familia || "De la misma familia", suyas);
     anadir(suyas.length ? "Otras opciones" : nombreGrupo(origen.grupo), resto);
     if (afines.length) anadir(nombreGrupo(afines[0].grupo), afines);
-    return '<p class="eq-intro">Estas cantidades aportan lo mismo:</p>' + partes.join("");
+    return partes.join("");
+  }
+
+  /** Separar por compatibilidad antes de agrupar por familia, sin quitar alternativas. */
+  function bloques(filas, origen) {
+    if (!filas.length) {
+      return '<p class="eq-vacio">Este alimento todavía no tiene alternativas con macros en la base.</p>';
+    }
+    const directas = filas.filter((a) => !a.ajustes || !a.ajustes.length);
+    const ajustar = filas.filter((a) => a.ajustes && a.ajustes.length);
+    const partes = [
+      '<div class="eq-categoria"><h3>Sustituciones directas</h3>' +
+      (directas.length
+        ? '<p class="eq-nota">Igualan el nutriente de referencia sin superar los márgenes de energía y los demás nutrientes. Comprueba que el cambio tenga sentido en tu receta.</p>' + _familias(directas, origen)
+        : '<p class="eq-vacio">Para esta cantidad no hay sustituciones directas dentro de los márgenes.</p>') +
+      '</div>',
+    ];
+    if (ajustar.length) {
+      partes.push(`<details class="eq-categoria eq-categoria-ajuste"><summary>${ICONO_AJUSTE}Ver opciones que requieren ajuste (${ajustar.length})</summary><div class="eq-categoria-contenido">` +
+        '<p class="eq-nota">Mantienen el macro de referencia, pero cambian demasiado la energía u otros macros. Consúltame antes de hacer el cambio.</p>' +
+        _familias(ajustar, origen) + '</div></details>');
+    }
+    return partes.join("");
   }
 
   /** Monta la calculadora en `contenedor` con los alimentos de `datos`. */
@@ -451,7 +500,7 @@
 
   const api = {
     macroPorDefecto, entraEnCalculadora, macroConmutable, gramosDeMacro, cantidadEquivalente,
-    alternativas, bloques, buscar, nombreGrupo, notaCantidad, montar,
+    alternativas, ajustesDe, bloques, buscar, nombreGrupo, notaCantidad, montar,
   };
   global.NduranceEquivalencias = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

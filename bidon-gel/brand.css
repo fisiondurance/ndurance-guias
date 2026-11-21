@@ -10,6 +10,7 @@
   --blanco: #FFFFFF;
   --exito: #15803D;
   --aviso: #B45309;
+  --aviso-fondo: #FEF3C7;
   --error: #B91C1C;
 }
 /* Estilos de marca para las guias HTML de NDURANCE Nutrition. Brand book 2.1 (2026-10-21):
@@ -286,7 +287,60 @@ li { margin-bottom: 4px; }
   margin: 0;
   font-size: 0.95rem;
 }
-.categoria { scroll-margin-top: 16px; }
+.categoria {
+  margin: 48px 0;
+  padding-bottom: 8px;
+  border: 1px solid var(--filete);
+  background: var(--blanco);
+  scroll-margin-top: 16px;
+}
+.categoria > .banda {
+  margin: 0;
+  padding: 18px 20px;
+  border-left: 4px solid var(--primario);
+  border-bottom: 1px solid var(--filete);
+  background: var(--gris);
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+.categoria > h3 {
+  margin: 28px 16px 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--filete);
+  font-family: Inter, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primario-oscuro);
+}
+.categoria > .productos, .categoria > .etiquetas { margin: 12px 16px 24px; }
+.seccion > .catalogo-leyenda { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; text-align: left; }
+.catalogo-leyenda-muestra {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  background: var(--aviso-fondo);
+  border: 1px solid var(--aviso);
+}
+.categoria-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 16px 8px;
+  padding: 12px;
+  border-left: 4px solid var(--aviso);
+  background: var(--gris);
+  text-align: left;
+}
+.categoria-aviso-icono { flex: none; width: 20px; height: 20px; margin-top: 2px; }
+.categoria-aviso-icono path { stroke: var(--aviso); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.categoria-aviso-icono circle { fill: var(--aviso); }
+.categoria[data-categoria="Buenos procesados"] .producto,
+.categoria[data-categoria="Buenos procesados"] .etiquetas li { background: var(--aviso-fondo); }
+.categoria[data-categoria="Buenos procesados"] .producto[data-aparicion="GUIA-0153"] { background: var(--blanco); }
+.categoria > .productos:not(:has(.producto:not([hidden]))),
+.categoria > .etiquetas:not(:has(li:not([hidden]))) { display: none; }
 .productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 8px 0 16px; }
 .producto {
   position: relative;
@@ -334,15 +388,19 @@ li { margin-bottom: 4px; }
 @media screen and (max-width: 767px) {
   .con-selector-categorias .indice { display: none; }
   .con-selector-categorias .ir-categoria { display: block; }
+  .categoria { margin: 32px 0; }
   .categoria > .banda {
-    margin: 32px 0 12px;
-    padding: 10px 14px;
+    margin: 0;
+    padding: 14px;
     background: var(--gris);
     border-left: 4px solid var(--primario);
-    font-size: 1.05rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
+    font-size: 1.45rem;
+    text-transform: none;
+    letter-spacing: normal;
   }
+  .categoria > h3 { margin: 24px 12px 8px; padding-bottom: 6px; font-size: 1rem; }
+  .categoria > .productos, .categoria > .etiquetas { margin: 12px 12px 20px; }
+  .categoria-aviso { margin: 12px 12px 8px; padding: 10px; font-size: 0.875rem; }
   .productos { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .producto { padding: 6px; }
   .producto-super { top: 4px; left: 4px; max-width: 36px; max-height: 18px; }
@@ -527,6 +585,8 @@ li { margin-bottom: 4px; }
   .portada-pie { margin-top: 24mm !important; font-size: 9pt !important; }
   .indice, .buscador, .tarjetas-secciones, .volver { display: none; }
   .seccion[hidden], .preambulo[hidden] { display: block; }
+  /* La pestaña de recetas es solo de pantalla, también mientras está en pausa. */
+  .seccion:has(.recetas), .seccion:has(.recetas-proximamente) { display: none !important; }
   .seccion + .seccion { break-before: page; }
   .productos { grid-template-columns: repeat(4, 1fr); }
   .producto, .etiquetas li, .categoria .banda, .conversion-card { break-inside: avoid; }
@@ -607,19 +667,10 @@ li { margin-bottom: 4px; }
 .equivalencias .eq-macro { margin: 4px 0 0; font-size: 0.85rem; color: var(--texto-sec); text-align: left; }
 .eq-macro strong { font-weight: 600; color: var(--tinta); }
 
-/* Donde empiezan los resultados: un subtitulo, sin barras decorativas. */
-.equivalencias .eq-intro {
-  margin: 40px 0 0;
-  font-family: "Archivo Narrow", Inter, sans-serif;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--tinta);
-  text-align: left;
-}
 /* Bloques: la categoria va en barra gris con filete magenta, el mismo recurso que marca el
    inicio de una categoria en el catalogo. Antes era texto secundario sobre un filete en
    tinta y se perdia entre las filas; Mario la pidio mas visible el 2026-10-17. */
-.equivalencias h3 {
+.equivalencias .eq-bloque > h4 {
   margin: 32px 0 0;
   padding: 8px 12px;
   border-left: 4px solid var(--primario);
@@ -630,7 +681,69 @@ li { margin-bottom: 4px; }
   text-transform: uppercase;
   color: var(--tinta);
 }
-.equivalencias .eq-intro + .eq-bloque > h3 { margin-top: 16px; }
+.equivalencias .eq-categoria > h3 {
+  margin: 32px 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: "Archivo Narrow", Inter, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: none;
+  color: var(--tinta);
+}
+.equivalencias .eq-nota { margin: 0 0 16px; font-size: 0.875rem; text-align: left; color: var(--texto-sec); }
+.equivalencias .eq-categoria > .eq-bloque:first-of-type > h4 { margin-top: 16px; }
+.eq-ajuste { grid-column: 1 / -1; font-size: 0.8rem; font-weight: 600; color: var(--tinta); }
+.eq-categoria-ajuste {
+  margin-top: 40px;
+  border: 2px solid var(--aviso);
+}
+.equivalencias .eq-categoria-ajuste > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: var(--aviso-fondo);
+  color: var(--tinta);
+  font-family: "Archivo Narrow", Inter, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.eq-categoria-ajuste > summary::-webkit-details-marker { display: none; }
+.eq-categoria-ajuste > summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.eq-categoria-ajuste[open] > summary::after { transform: rotate(225deg); }
+.eq-categoria-ajuste > summary:focus-visible { outline: 2px solid var(--primario); outline-offset: 2px; }
+.eq-categoria-ajuste[open] > summary { border-bottom: 1px solid var(--aviso); }
+.eq-categoria-ajuste > .eq-categoria-contenido { padding: 16px; }
+.eq-categoria-ajuste .eq-bloque:first-of-type > h4 { margin-top: 16px; }
+.eq-categoria-ajuste .eq-ajuste {
+  margin-top: 4px;
+  padding: 8px;
+  background: var(--aviso-fondo);
+}
+.eq-aviso-icono {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.4em;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+.eq-aviso-triangulo { fill: var(--aviso-fondo); stroke: var(--aviso); stroke-width: 1.5; stroke-linejoin: round; }
+.eq-aviso-signo { fill: none; stroke: var(--tinta); stroke-width: 2; stroke-linecap: round; }
 
 /* Cada alternativa: nombre y marca, gramos a la derecha y el detalle en piezas debajo. */
 .eq-lista { list-style: none; margin: 0; padding: 0; }
@@ -814,4 +927,254 @@ li { margin-bottom: 4px; }
   .calc-campo { grid-column: span 1; }
   .calc-campo.calc-medio, .calc-campo.calc-ancho-movil { grid-column: span 2; }
   .calc-boton { width: 100%; }
+}
+
+/* Vista de recetas (guia de alimentos): el paciente marca las que quiere y las envia. */
+.recetas { margin: 16px 0 8px; }
+.recetas-pestanas { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.recetas-pestana {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 14px;
+  border: 1px solid var(--filete);
+  border-radius: 6px;
+  background: var(--blanco);
+  color: var(--tinta);
+  cursor: pointer;
+}
+.recetas-pestana[aria-pressed="true"] { background: var(--primario); border-color: var(--primario); color: var(--blanco); }
+.recetas-pestana:focus-visible { outline: 2px solid var(--primario-tenue); outline-offset: 2px; }
+.recetas-grupo[hidden], .receta[hidden], .recetas-barra[hidden] { display: none; }
+/* El titulo del grupo solo hace falta al buscar, cuando se mezclan varios tipos de comida. */
+.recetas-grupo h3 { display: none; }
+.recetas-grupo.buscando h3 { display: block; }
+.recetas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 0 0 24px; }
+.receta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 10px;
+  align-content: start;
+  padding: 12px;
+  background: var(--gris);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.receta.elegida { border-color: var(--primario); }
+.receta input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--primario); }
+.receta-foto { grid-column: 1 / -1; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+.receta-texto { display: block; min-width: 0; }
+.receta-nombre { display: block; font-weight: 600; line-height: 1.3; }
+.receta-ingredientes { display: block; margin-top: 4px; color: var(--texto-sec); font-size: 0.9rem; line-height: 1.4; }
+.recetas-barra {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  background: var(--blanco);
+  border-top: 1px solid var(--filete);
+  font-weight: 600;
+}
+.recetas-enviar { padding: 10px 16px; border-radius: 6px; background: var(--primario); color: var(--blanco); font-weight: 600; text-decoration: none; }
+.recetas-enviar:hover { background: var(--primario-oscuro); color: var(--blanco); }
+
+/* Verduras: miniaturas y ficha de consulta. */
+.verduras-boton {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--primario);
+  border-radius: 6px;
+  background: var(--primario);
+  color: var(--blanco);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+.verduras-boton:hover { background: var(--primario-oscuro); }
+.verduras-boton:focus-visible, .verdura-cerrar:focus-visible,
+.verduras-ayuda > summary:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 3px;
+}
+.verduras-boton-secundario { background: transparent; color: var(--primario-oscuro); }
+.verduras-boton-secundario:hover { color: var(--blanco); }
+.frutas-contenido, .verduras-contenido {
+  margin: 24px 0 0;
+  padding: 24px;
+  background: var(--gris);
+  scroll-margin-top: 16px;
+}
+.frutas-contenido .etiquetas li, .verduras-contenido .etiquetas li { background: var(--blanco); }
+.alimentos-bloque-titulo {
+  margin: 0 0 16px;
+  font-family: "Archivo Narrow", Inter, sans-serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--tinta);
+  text-align: left;
+}
+.verdura-nombre { display: block; padding: 10px 8px; font-weight: 600; text-align: center; }
+.verduras-catalogo { margin: 16px 0 24px; }
+.verduras-ayuda { margin: 24px 0; border-block: 1px solid var(--filete); }
+.verduras-ayuda > summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-weight: 600; }
+.verduras-ayuda-cuerpo { padding: 4px 0 12px; }
+.verduras-ayuda-cuerpo ul { padding-left: 22px; }
+.verduras-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin: 20px 0 32px;
+}
+.verdura-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+  background: var(--blanco);
+}
+.verdura-card[open] { grid-column: span 2; }
+.verdura-card > summary { display: block; list-style: none; cursor: pointer; }
+.verdura-card > summary::-webkit-details-marker { display: none; }
+.verdura-card > summary::marker { content: ""; }
+.verdura-card > summary:focus-visible { outline: none; }
+.verdura-card:focus-within { outline: 2px solid var(--primario); outline-offset: 3px; }
+.verdura-foto {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--filete);
+}
+.verdura-foto-producto { object-fit: contain; background: var(--blanco); }
+.verdura-cuerpo { padding: 20px; }
+.verdura-card h3, .verdura-dialogo h3 {
+  margin: 0 0 24px;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+.verdura-card h4, .verdura-dialogo h4 {
+  margin: 20px 0 12px;
+  font-family: "Archivo Narrow", Inter, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.verdura-ingredientes {
+  margin: 0;
+  border-radius: 6px;
+  background: var(--blanco);
+}
+.verdura-ingredientes > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--filete);
+}
+.verdura-ingredientes > div:last-child { border-bottom: 0; }
+.verdura-ingredientes dt { min-width: 0; }
+.verdura-ingredientes dd {
+  margin: 0;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.verdura-card ol, .verdura-dialogo ol { margin: 0; padding-left: 22px; }
+.verdura-card li, .verdura-dialogo li { margin: 0 0 10px; padding-left: 2px; }
+.verdura-card li:last-child, .verdura-dialogo li:last-child { margin-bottom: 0; }
+.verdura-dialogo {
+  width: min(520px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 8px;
+  background: var(--gris);
+  color: var(--tinta);
+  font: 16px/1.5 Inter, sans-serif;
+}
+.verdura-dialogo::backdrop { background: var(--franja); opacity: 0.45; }
+.verdura-dialogo .verdura-foto { height: 160px; aspect-ratio: auto; }
+.verdura-dialogo-barra {
+  display: flex;
+  justify-content: flex-end;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 4px 12px;
+  background: var(--gris);
+}
+.verdura-cerrar {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--primario-oscuro);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media screen and (max-width: 767px) {
+  .frutas-contenido, .verduras-contenido { padding: 20px 16px; }
+  .seccion .frutas-contenido p { text-align: left; hyphens: none; -webkit-hyphens: none; }
+  .verduras-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .verdura-cuerpo { padding: 16px; }
+  .seccion .verduras-contenido p { text-align: left; hyphens: none; -webkit-hyphens: none; }
+  .verdura-dialogo {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: 88vh;
+    max-height: 88dvh;
+    margin: 0;
+    border-radius: 8px 8px 0 0;
+  }
+}
+@media print {
+  .frutas-contenido { margin-top: 12pt; padding: 12pt; break-inside: avoid; }
+  .alimentos-bloque-titulo { font-size: 15pt; margin-bottom: 8pt; }
+  .verduras-contenido { margin-top: 12pt; padding: 12pt; }
+  .verdura-dialogo, .verdura-dialogo::backdrop { display: none !important; }
+  body:has(.verdura-dialogo[open]) { overflow: visible !important; }
+  .verdura-nombre { display: none; }
+  .verduras-boton { padding: 0; min-height: 0; border: 0; background: none; color: var(--tinta); }
+  .verduras-ayuda { border: 0; }
+  .verduras-ayuda > summary { min-height: 0; padding: 0 0 6pt; font-family: "Archivo Narrow", Inter, sans-serif; font-size: 15pt; }
+  .verduras-ayuda-cuerpo { padding: 0; }
+  .verduras-tarjetas { display: block; margin: 12pt 0 18pt; }
+  .verdura-card, .verdura-card:focus-within { margin: 0 0 12pt; border-radius: 0; break-inside: avoid; outline: none; }
+  .verdura-foto { height: 28mm; aspect-ratio: auto; }
+  .verdura-cuerpo { padding: 8pt 10pt; }
+  .verdura-card h3 { margin: 0 0 8pt; font-size: 15pt; }
+  .verdura-card h4 { margin: 8pt 0 4pt; font-size: 12pt; break-after: avoid; }
+  .verdura-ingredientes { border-radius: 0; }
+  .verdura-ingredientes > div { padding: 2pt 6pt; }
+  .verdura-card li { margin-bottom: 4pt; }
+}
+
+@media print {
+  .categoria { margin: 18pt 0 0; padding: 0; border: 0; }
+  .categoria > .banda {
+    margin: 0 0 8pt;
+    padding: 8pt 10pt;
+    border-left-width: 3pt;
+    border-bottom: 0;
+    font-size: 15pt;
+  }
+  .categoria > h3 { margin: 14pt 0 6pt; padding-bottom: 3pt; font-size: 12pt; }
+  .categoria-aviso { break-after: avoid; }
+  .categoria > .productos, .categoria > .etiquetas { margin: 8pt 0 16pt; }
 }

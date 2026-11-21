@@ -44,14 +44,32 @@
 
   // Con #seccion-2 se abre esa seccion; con un ancla interior (#cat-huevos) se abre la
   // seccion que la contiene y se deja al navegador llegar al ancla.
-  const objetivo = location.hash ? document.getElementById(location.hash.slice(1)) : null;
-  const contenedora = objetivo ? objetivo.closest(".seccion") : null;
-  if (contenedora) {
-    abierta = contenedora;
-    pintar();
-    if (objetivo !== contenedora) objetivo.scrollIntoView({ block: "start" });
-    else nav.scrollIntoView({ block: "start" });
-  } else {
-    abrir(null, false);
+  function abrirDesdeHash() {
+    const objetivo = location.hash ? document.getElementById(location.hash.slice(1)) : null;
+    const contenedora = objetivo ? objetivo.closest(".seccion") : null;
+    if (contenedora) {
+      abierta = contenedora;
+      pintar();
+      if (objetivo !== contenedora) objetivo.scrollIntoView({ block: "start" });
+      else nav.scrollIntoView({ block: "start" });
+    } else {
+      abrir(null, false);
+    }
   }
+  abrirDesdeHash();
+  window.addEventListener("hashchange", abrirDesdeHash);
+
+  // El PDF incluye todas las recetas; al terminar, se recupera lo que estaba abierto.
+  let estadoImpresion = null;
+  window.addEventListener("beforeprint", () => {
+    if (estadoImpresion) return;
+    estadoImpresion = Array.from(document.querySelectorAll("details.verdura-card, details.verduras-ayuda"),
+      (tarjeta) => [tarjeta, tarjeta.open]);
+    estadoImpresion.forEach(([tarjeta]) => { tarjeta.open = true; });
+  });
+  window.addEventListener("afterprint", () => {
+    if (!estadoImpresion) return;
+    estadoImpresion.forEach(([tarjeta, abiertaAntes]) => { tarjeta.open = abiertaAntes; });
+    estadoImpresion = null;
+  });
 })();
