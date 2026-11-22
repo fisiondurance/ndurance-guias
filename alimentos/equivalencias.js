@@ -7,7 +7,8 @@
  * equivalencia no es una identidad nutricional.
  *
  * Spec: docs/specs/2026-09-27-calculadora-equivalencias-guia.md, revisada en
- * docs/specs/2026-10-04-revision-calculadora-equivalencias.md
+ * docs/specs/2026-10-04-revision-calculadora-equivalencias.md y
+ * docs/specs/2026-11-14-calculadora-equivalencias-dos-modos.md
  */
 (function (global) {
   "use strict";
@@ -41,7 +42,8 @@
   /** La nota bajo la cantidad: en que estado se pesa el alimento elegido. */
   function notaCantidad(origen) {
     const estado = origen && propio(ESTADOS, origen.estado);
-    return estado ? `${estado.nota}. ${REDONDEO}` : REDONDEO;
+    return estado ? `${estado.nota}. ${REDONDEO}` :
+      (origen ? `Comprueba en tu pauta cómo se pesa. ${REDONDEO}` : REDONDEO);
   }
   // El macro que iguala cada grupo. Un grupo que no esta aqui no entra en la calculadora.
   // Los lacteos, por proteina desde el 2026-10-08: por racion no eran equivalentes.
@@ -103,9 +105,33 @@
     return propio(MACRO_POR_GRUPO, alimento.grupo) !== undefined;
   }
 
-  /** Solo en las legumbres se ofrece cambiar el macro: es donde el automatico se discute. */
+  /** Todos los grupos permiten sustituir el criterio automatico por uno manual. */
   function macroConmutable(alimento) {
-    return propio(MACRO_POR_GRUPO, alimento.grupo) === "mayor";
+    return entraEnCalculadora(alimento);
+  }
+
+  /** Una celda vacia o no numerica no representa un aporte nulo. */
+  function datosValidos(alimento) {
+    return Boolean(alimento && typeof alimento.id === "string" && alimento.id &&
+      typeof alimento.nombre === "string" && alimento.nombre &&
+      ORDEN_MACROS.every((m) => typeof alimento[m] === "number" &&
+        Number.isFinite(alimento[m]) && alimento[m] >= 0));
+  }
+
+  /** Gramos positivos, tambien con coma decimal; sin coerciones de texto ambiguo. */
+  function leerCantidad(texto) {
+    const valor = String(texto).trim();
+    if (!/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(valor)) return null;
+    const numero = Number(valor.replace(",", "."));
+    return Number.isFinite(numero) && numero > 0 ? numero : null;
+  }
+
+  /** El criterio manual no abre otros grupos de intercambio. */
+  function destinosDe(origen, alimentos) {
+    if (!origen || !entraEnCalculadora(origen)) return [];
+    const afin = propio(GRUPO_AFIN, origen.grupo);
+    return alimentos.filter((a) => datosValidos(a) && a.id !== origen.id &&
+      (a.grupo === origen.grupo || (afin !== undefined && a.grupo === afin)));
   }
 
   /** Gramos del macro elegido que aporta esa cantidad del alimento. */
@@ -115,8 +141,9 @@
 
   /** Cantidad del destino que aporta esos gramos del macro, redondeada a 5 g. */
   function cantidadEquivalente(gramosMacro, destino, macro) {
-    if (!destino[macro]) return 0;
-    return Math.round((gramosMacro * 100) / destino[macro] / PASO) * PASO;
+    if (!(gramosMacro > 0) || !(destino[macro] > 0)) return 0;
+    const cantidad = Math.round((gramosMacro * 100) / destino[macro] / PASO) * PASO;
+    return Number.isFinite(cantidad) ? cantidad : 0;
   }
 
   function _valores(alimento, cantidad) {
@@ -141,6 +168,34 @@
     });
   }
 
+  /** Comparacion unica para el sustituto elegido y las recomendaciones. */
+  function comparar(origen, cantidad, destino, macro) {
+    if (!datosValidos(origen) || !datosValidos(destino) || !Number.isFinite(cantidad) ||
+        cantidad <= 0 || !ORDEN_MACROS.includes(macro) || !(origen[macro] > 0) ||
+        !destinosDe(origen, [destino]).length) return null;
+    // El objetivo de calculo conserva su precision; gramosDeMacro redondea solo para mostrar.
+    const equivalente = cantidadEquivalente((cantidad * origen[macro]) / 100, destino, macro);
+    if (!equivalente || !ORDEN_MACROS.every((m) =>
+      Number.isFinite(cantidad * origen[m]) && Number.isFinite(equivalente * destino[m]))) return null;
+    const valoresOrigen = _valores(origen, cantidad);
+    const valores = _valores(destino, equivalente);
+    const comparacion = ORDEN_MACROS.map((m) => ({
+      macro: m, origen: valoresOrigen[m], destino: valores[m],
+      delta: redondear((equivalente * destino[m]) / 100 - (cantidad * origen[m]) / 100,
+        m === "kcal" ? 0 : 1),
+    }));
+    return {
+      id: destino.id, nombre: destino.nombre, grupo: destino.grupo, familia: destino.familia,
+      marca: destino.marca || "", estado: destino.estado || "", prioridad: destino.prioridad,
+      cantidad: equivalente, kcal: valores.kcal,
+      ajustes: ajustesDe(origen, cantidad, destino, equivalente, macro),
+      misma_familia: Boolean(origen.familia) && destino.grupo === origen.grupo && destino.familia === origen.familia,
+      afin: destino.grupo !== origen.grupo,
+      comparacion,
+      diferencias: comparacion.filter((d) => d.macro !== macro),
+    };
+  }
+
   /**
    * Las alternativas del grupo del origen y de su grupo afin, con su cantidad equivalente y
    * lo que se desvian.
@@ -152,39 +207,10 @@
    * Orden: su familia, el resto de su grupo y, al final, el grupo afin.
    */
   function alternativas(origen, cantidad, macro, alimentos) {
-    const gramosMacro = gramosDeMacro(origen, cantidad, macro);
+    if (!datosValidos(origen) || !Number.isFinite(cantidad) || cantidad <= 0) return [];
     const valoresOrigen = _valores(origen, cantidad);
-    const afin = propio(GRUPO_AFIN, origen.grupo);
-    const lista = alimentos
-      .filter((a) => a.id !== origen.id && a[macro] > 0)
-      .filter((a) => a.grupo === origen.grupo || (afin !== undefined && a.grupo === afin))
-      .map((a) => {
-        const equivalente = cantidadEquivalente(gramosMacro, a, macro);
-        const valores = _valores(a, equivalente);
-        const mismoGrupo = a.grupo === origen.grupo;
-        return {
-          id: a.id,
-          nombre: a.nombre,
-          grupo: a.grupo,
-          familia: a.familia,
-          marca: a.marca || "",
-          estado: a.estado || "",
-          prioridad: a.prioridad,
-          cantidad: equivalente,
-          kcal: valores.kcal,
-          ajustes: ajustesDe(origen, cantidad, a, equivalente, macro),
-          misma_familia: mismoGrupo && a.familia === origen.familia,
-          afin: !mismoGrupo,
-          diferencias: ORDEN_MACROS.filter((m) => m !== macro).map((m) => ({
-            macro: m,
-            origen: valoresOrigen[m],
-            destino: valores[m],
-            delta: redondear((equivalente * a[m]) / 100 - (cantidad * origen[m]) / 100,
-              m === "kcal" ? 0 : 1),
-          })),
-        };
-      })
-      .filter((a) => a.cantidad > 0);
+    const lista = destinosDe(origen, alimentos)
+      .map((a) => comparar(origen, cantidad, a, macro)).filter(Boolean);
 
     const bloque = (a) => (a.misma_familia ? 0 : a.afin ? 2 : 1);
     return lista.sort((a, b) => {
@@ -237,17 +263,43 @@
     return (valor > 0 ? "+" : valor < 0 ? "\u2212" : "") + texto;
   }
 
-  /** Una sugerencia por alimento: el nombre y, debajo, su grupo y la marca si la tiene. */
-  function _sugerencias(alimentos) {
-    return alimentos
-      .map(
-        (a) =>
-          `<li role="option"><button type="button" data-eq-elegir="${escapar(a.id)}">` +
-          `<span class="eq-alimento">${escapar(a.nombre)}</span>` +
-          `<span class="eq-detalle">${escapar(nombreGrupo(a.grupo))}` +
-          `${a.marca ? `, ${escapar(a.marca)}` : ""}</span></button></li>`
-      )
-      .join("");
+  const icono = (trazo, clase = "") => `<svg class="eq-icono ${clase}" viewBox="0 0 24 24" ` +
+    `fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ` +
+    `aria-hidden="true" focusable="false">${trazo}</svg>`;
+  const LUPA = icono('<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/>');
+  const CHEVRON = icono('<path d="m9 5 7 7-7 7"/>');
+  const ELEGIDO = icono('<path d="m5 12 4 4L19 6"/>');
+  const ORDEN_GRUPOS = Object.keys(MACRO_POR_GRUPO);
+  function iconoGrupo(grupo) {
+    if (grupo.startsWith("HC")) return icono('<path d="M4 20 18 6M7 17c-4 0-4-4-4-4 4 0 4 4 4 4ZM11 13c-4 0-4-4-4-4 4 0 4 4 4 4ZM15 9c-4 0-4-4-4-4 4 0 4 4 4 4ZM7 17c0 4 4 4 4 4 0-4-4-4-4-4ZM11 13c0 4 4 4 4 4 0-4-4-4-4-4ZM15 9c0 4 4 4 4 4 0-4-4-4-4-4Z"/>');
+    if (grupo.startsWith("Lácteos")) return icono('<path d="M9 3h6v5l3 4v9H6v-9l3-4V3ZM9 7h6M6 14h12"/>');
+    if (grupo === "Grasas") return icono('<path d="M12 3s-7 8-7 12a7 7 0 0 0 14 0c0-4-7-12-7-12Z"/>');
+    if (grupo.startsWith("Legumbre")) return icono('<path d="M12 21V11M12 15C5 15 4 11 4 6c5 0 8 2 8 7M12 11c0-5 3-7 8-7 0 5-1 9-8 9"/>');
+    return icono('<path d="M4 3v6a3 3 0 0 0 6 0V3M7 3v18M18 3v18M18 3c-4 3-4 9 0 9"/>');
+  }
+
+  /** Cabeceras al explorar; metadatos de grupo al buscar, sin alterar la relevancia. */
+  function _sugerencias(alimentos, prefijo, atributo, agrupar, seleccionado) {
+    let grupoAnterior = null;
+    return alimentos.map((a, i) => {
+      let cabecera = "";
+      if (agrupar && a.grupo !== grupoAnterior) {
+        grupoAnterior = a.grupo;
+        const total = alimentos.filter((opcion) => opcion.grupo === a.grupo).length;
+        cabecera = `<li class="eq-opciones-grupo" role="presentation" aria-hidden="true">` +
+          `${iconoGrupo(a.grupo)}<span>${escapar(nombreGrupo(a.grupo))}</span><span class="eq-grupo-total">${total}</span></li>`;
+      }
+      const elegido = seleccionado === a.id;
+      const estado = propio(ESTADOS, a.estado);
+      const detalles = [!agrupar ? nombreGrupo(a.grupo) : "", a.marca || "", estado ? estado.nota : ""].filter(Boolean);
+      return cabecera + `<li role="presentation"><button type="button" role="option" tabindex="-1" ` +
+        `id="${prefijo}-opcion-${i}" aria-selected="${elegido}" data-eq-grupo="${escapar(a.grupo)}" ` +
+        `data-eq-seleccionada="${elegido}" aria-label="${escapar([a.nombre, nombreGrupo(a.grupo), a.marca || "", estado ? estado.nota : ""].filter(Boolean).join(", "))}" ` +
+        `${atributo}="${escapar(a.id)}"><span class="eq-opcion-texto">` +
+        `<span class="eq-alimento">${escapar(a.nombre)}</span>` +
+        (detalles.length ? `<span class="eq-opcion-meta">${detalles.map(d => `<span>${escapar(d)}</span>`).join("")}</span>` : "") +
+        `</span><span class="eq-opcion-indicador">${elegido ? ELEGIDO : CHEVRON}</span></button></li>`;
+    }).join("");
   }
 
   /**
@@ -283,7 +335,9 @@
         return (
           `<li${oculta}>` +
           `<span class="eq-alimento">${escapar(a.nombre)}${marca}</span>` +
-          `<span class="eq-gramos">${a.cantidad} g</span>` +
+          `<button type="button" class="eq-comparar" data-eq-comparar="${escapar(a.id)}" ` +
+          `aria-label="Comparar ${escapar(a.nombre)}, ${a.cantidad} g">` +
+          `<span class="eq-gramos">${a.cantidad} g</span><span>Comparar</span></button>` +
           `<span class="eq-detalle">${_detalle(a)}</span>` +
           (a.ajustes && a.ajustes.length
             ? `<span class="eq-ajuste">${ICONO_AJUSTE}Requiere ajuste: ${a.ajustes.map((d) =>
@@ -323,7 +377,7 @@
   /** Separar por compatibilidad antes de agrupar por familia, sin quitar alternativas. */
   function bloques(filas, origen) {
     if (!filas.length) {
-      return '<p class="eq-vacio">Este alimento todavía no tiene alternativas con macros en la base.</p>';
+      return '<p class="eq-vacio">No hay alternativas calculables para este alimento y criterio en la base.</p>';
     }
     const directas = filas.filter((a) => !a.ajustes || !a.ajustes.length);
     const ajustar = filas.filter((a) => a.ajustes && a.ajustes.length);
@@ -342,165 +396,300 @@
     return partes.join("");
   }
 
-  /** Monta la calculadora en `contenedor` con los alimentos de `datos`. */
-  function montar(contenedor, datos) {
-    const disponibles = (datos || []).filter(entraEnCalculadora);
-    if (!contenedor || !disponibles.length) return;
-    contenedor.innerHTML =
-      '<div class="eq-controles">' +
-      '<div class="eq-campo eq-buscar" data-eq-buscar><label for="eq-alimento">Alimento del menú</label>' +
-      '<input id="eq-alimento" type="search" autocomplete="off" spellcheck="false" ' +
-      'placeholder="Escribe: arroz, pollo, avena" role="combobox" aria-autocomplete="list" ' +
-      'aria-expanded="false" aria-controls="eq-sugerencias" data-eq-alimento>' +
-      '<ul id="eq-sugerencias" class="eq-sugerencias" role="listbox" hidden data-eq-sugerencias></ul>' +
-      "</div>" +
-      '<p class="eq-campo"><label for="eq-cantidad">Cantidad</label>' +
-      '<span class="eq-cantidad"><input id="eq-cantidad" type="number" min="5" step="5" value="100" ' +
-      'inputmode="numeric" data-eq-cantidad><span>g</span></span>' +
-      `<span class="eq-ayuda" data-eq-ayuda>${REDONDEO}</span></p>` +
-      "</div>" +
-      // La referencia: lo que aporta el alimento elegido y el macro que se iguala.
-      '<div class="eq-referencia" data-eq-referencia hidden>' +
-      '<p class="eq-resumen" data-eq-resumen></p>' +
-      '<p class="eq-macro" data-eq-macro></p>' +
-      "</div>" +
-      '<div data-eq-resultado></div>';
+  /** Comparacion de las dos raciones, incluido el residuo del criterio igualado. */
+  function fichaComparacion(a) {
+    const estado = propio(ESTADOS, a.estado);
+    const filas = ["kcal", "hc", "proteinas", "grasas"].map((m) => {
+      const d = a.comparacion.find((c) => c.macro === m);
+      const unidad = m === "kcal" ? "" : " g";
+      const decimales = m === "kcal" ? 0 : 1;
+      return `<tr><th scope="row">${{ kcal: "kcal", hc: "Hidratos", proteinas: "Proteína", grasas: "Grasa" }[m]}</th>` +
+        `<td>${cifra(d.origen, decimales)}${unidad}</td><td>${cifra(d.destino, decimales)}${unidad}</td>` +
+        `<td>${cifra(d.delta, decimales, true)}${unidad}</td></tr>`;
+    }).join("");
+    return '<div class="eq-elegido">' +
+      `<div class="eq-elegido-cabecera"><div><h3>${escapar(a.nombre)}</h3>` +
+      `${a.marca ? `<p class="eq-nota">${escapar(a.marca)}</p>` : ""}</div>` +
+      `<strong class="eq-cantidad-destino">${a.cantidad} g</strong></div>` +
+      `<p class="eq-nota">${estado ? estado.nota : "Comprueba en tu pauta cómo se pesa."}</p>` +
+      (a.ajustes.length
+        ? `<div class="eq-aviso-elegido"><strong>${ICONO_AJUSTE}Requiere ajuste</strong><p>` +
+          a.ajustes.map((d) => `${cifra(d.delta, d.macro === "kcal" ? 0 : 1, true)} ` +
+            `${d.macro === "kcal" ? "kcal" : `g de ${ETIQUETAS[d.macro]}`}`).join("; ") +
+          '. Consúltame antes de hacer el cambio.</p></div>'
+        : '<p class="eq-directa">Sustitución directa dentro de los márgenes.</p>') +
+      '<table class="eq-comparacion"><caption>Comparación de las dos cantidades</caption>' +
+      '<thead><tr><th scope="col">Nutriente</th><th scope="col">Pauta</th>' +
+      '<th scope="col">Cambio</th><th scope="col">Diferencia</th></tr></thead>' +
+      `<tbody>${filas}</tbody></table>` +
+      '<p class="eq-nota">La equivalencia es aproximada por el redondeo. Comprueba que el cambio tenga sentido en tu receta.</p></div>';
+  }
 
-    const campo = contenedor.querySelector("[data-eq-buscar]");
-    const buscador = contenedor.querySelector("[data-eq-alimento]");
-    const sugerencias = contenedor.querySelector("[data-eq-sugerencias]");
-    const cantidad = contenedor.querySelector("[data-eq-cantidad]");
-    const resumen = contenedor.querySelector("[data-eq-resumen]");
-    const resultado = contenedor.querySelector("[data-eq-resultado]");
-    const pie = contenedor.querySelector("[data-eq-macro]");
-    const referencia = contenedor.querySelector("[data-eq-referencia]");
-    const ayuda = contenedor.querySelector("[data-eq-ayuda]");
-    let origen = null;
-    let macro = null;
+  let instancias = 0;
 
-    function cerrarSugerencias() {
-      sugerencias.hidden = true;
-      sugerencias.innerHTML = "";
-      buscador.setAttribute("aria-expanded", "false");
+  /** Buscador con foco en el campo y opcion activa anunciada mediante ARIA. */
+  function montarBuscador(campo, input, lista, obtener, seleccionar, alEscribir, prefijo, atributo, vacio, seleccionado) {
+    let encontrados = [];
+    let activo = -1;
+    function cerrar() {
+      lista.hidden = true;
+      lista.innerHTML = "";
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      campo.classList.remove("eq-buscar-abierto");
+      encontrados = [];
+      activo = -1;
     }
-
-    function sugerir() {
-      if (!normalizar(buscador.value)) {
-        cerrarSugerencias();
-        return;
+    function activar(i) {
+      activo = i;
+      const opciones = [...lista.querySelectorAll('[role="option"]')];
+      opciones.forEach((opcion, j) => opcion.setAttribute("aria-selected", String(i === j)));
+      if (opciones[i]) {
+        input.setAttribute("aria-activedescendant", opciones[i].id);
+        opciones[i].scrollIntoView({ block: "nearest" });
       }
-      const encontrados = buscar(disponibles, buscador.value);
-      sugerencias.innerHTML = encontrados.length
-        ? _sugerencias(encontrados)
-        : `<li class="eq-sin-resultado">${escapar(SIN_RESULTADO)}</li>`;
-      sugerencias.hidden = false;
-      buscador.setAttribute("aria-expanded", "true");
     }
-
     function elegir(id) {
-      const elegido = disponibles.find((a) => a.id === id);
+      const elegido = encontrados.find((a) => a.id === id);
       if (!elegido) return;
-      if (elegido !== origen) macro = macroPorDefecto(elegido);
-      origen = elegido;
-      buscador.value = elegido.nombre;
-      cerrarSugerencias();
-      pintar();
+      input.value = elegido.nombre;
+      cerrar();
+      seleccionar(elegido);
     }
-
-    function pintar() {
-      ayuda.textContent = notaCantidad(origen);
-      // Sin alimento elegido no hay referencia: la indicacion va encima, en el texto de la guia.
-      if (!origen) {
-        referencia.hidden = true;
-        resumen.textContent = "";
-        resultado.innerHTML = "";
-        pie.innerHTML = "";
-        return;
-      }
-      referencia.hidden = false;
-      const gramos = Math.max(Number(cantidad.value) || 0, 0);
-      if (!gramos) {
-        resumen.textContent = "Escribe la cantidad que marca tu menú.";
-        resultado.innerHTML = "";
-        pie.innerHTML = "";
-        return;
-      }
-      const gramosMacro = gramosDeMacro(origen, gramos, macro);
-      resumen.innerHTML =
-        `<strong>${gramos} g de ${escapar(origen.nombre)}</strong> aportan ` +
-        `<span class="eq-aporte">${cifra(gramosMacro, 1)} g de ${ETIQUETAS[macro]}</span>`;
-      resultado.innerHTML = bloques(alternativas(origen, gramos, macro, disponibles), origen);
-
-      pie.innerHTML = `Igualando <strong>${ETIQUETAS[macro]}</strong>.`;
-      if (macroConmutable(origen)) {
-        const otro = macro === "hc" ? "proteinas" : "hc";
-        pie.innerHTML +=
-          ` <button type="button" data-eq-cambiar>Igualar por ${ETIQUETAS[otro]}</button>`;
-        pie.querySelector("[data-eq-cambiar]").addEventListener("click", () => {
-          macro = otro;
-          pintar();
-        });
-      }
-
-      resultado.querySelectorAll("[data-eq-mas]").forEach((boton) => {
-        boton.addEventListener("click", () => {
-          boton
-            .closest(".eq-bloque")
-            .querySelectorAll(".eq-oculta")
-            .forEach((fila) => fila.classList.remove("eq-oculta"));
-          boton.parentElement.remove();
-        });
-      });
+    function mostrar(consulta = "") {
+      cerrar();
+      const opciones = obtener();
+      // Sin texto se puede recorrer toda la lista; al escribir se muestran coincidencias.
+      const filtrando = Boolean(normalizar(consulta));
+      const coincidencias = filtrando ? buscar(opciones, consulta, opciones.length) : [];
+      encontrados = filtrando ? coincidencias.slice(0, SUGERENCIAS) : [...opciones].sort((a, b) =>
+        ORDEN_GRUPOS.indexOf(a.grupo) - ORDEN_GRUPOS.indexOf(b.grupo) || a.nombre.localeCompare(b.nombre, "es"));
+      const total = filtrando && coincidencias.length > encontrados.length ?
+        `${encontrados.length} de ${coincidencias.length}` : encontrados.length;
+      const info = `<li class="eq-opciones-info" role="presentation" aria-hidden="true">` +
+        `<span>${filtrando ? "Coincidencias" : "Elige un alimento"}</span><span>${total}</span></li>`;
+      lista.innerHTML = encontrados.length ? info + _sugerencias(encontrados, prefijo, atributo, !filtrando, seleccionado()) :
+        `<li class="eq-sin-resultado">${vacio()}</li>`;
+      lista.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      campo.classList.add("eq-buscar-abierto");
     }
-
-    buscador.addEventListener("input", sugerir);
-    // Al volver al campo se selecciona lo escrito: en el movil, teclear ya lo sustituye.
-    buscador.addEventListener("focus", () => buscador.select());
-    buscador.addEventListener("keydown", (evento) => {
-      const primera = sugerencias.querySelector("[data-eq-elegir]");
-      if (evento.key === "Enter" && primera) {
+    input.addEventListener("input", () => {
+      alEscribir();
+      mostrar(input.value);
+    });
+    input.addEventListener("focus", () => {
+      input.select();
+      mostrar();
+    });
+    input.addEventListener("click", () => {
+      if (lista.hidden) mostrar();
+    });
+    input.addEventListener("keydown", (evento) => {
+      if (evento.key === "Escape") { cerrar(); return; }
+      if (lista.hidden && (evento.key === "ArrowDown" || evento.key === "ArrowUp")) mostrar();
+      if (lista.hidden || !encontrados.length) return;
+      if (evento.key === "ArrowDown" || evento.key === "ArrowUp") {
         evento.preventDefault();
-        elegir(primera.dataset.eqElegir);
-      } else if (evento.key === "ArrowDown" && primera) {
+        const paso = evento.key === "ArrowDown" ? 1 : -1;
+        activar(activo === -1 ? (paso === 1 ? 0 : encontrados.length - 1) :
+          (activo + paso + encontrados.length) % encontrados.length);
+      } else if (evento.key === "Enter") {
         evento.preventDefault();
-        primera.focus();
-      } else if (evento.key === "Escape") {
-        cerrarSugerencias();
+        elegir(encontrados[Math.max(activo, 0)].id);
       }
     });
-    sugerencias.addEventListener("click", (evento) => {
-      const boton = evento.target.closest("[data-eq-elegir]");
-      if (boton) elegir(boton.dataset.eqElegir);
+    lista.addEventListener("mousedown", (evento) => evento.preventDefault());
+    lista.addEventListener("click", (evento) => {
+      const opcion = evento.target.closest(`[${atributo}]`);
+      if (opcion) elegir(opcion.getAttribute(atributo));
     });
-    sugerencias.addEventListener("keydown", (evento) => {
-      const botones = Array.from(sugerencias.querySelectorAll("[data-eq-elegir]"));
-      const i = botones.indexOf(evento.target);
-      if (evento.key === "ArrowDown" && i < botones.length - 1) {
-        evento.preventDefault();
-        botones[i + 1].focus();
-      } else if (evento.key === "ArrowUp") {
-        evento.preventDefault();
-        (i > 0 ? botones[i - 1] : buscador).focus();
-      } else if (evento.key === "Escape") {
-        cerrarSugerencias();
-        buscador.focus();
-      }
-    });
-    // La lista se cierra al salir del campo con el teclado o al tocar fuera. En iOS un boton
-    // tocado no recibe el foco, asi que perderlo sin destino no cierra nada.
     campo.addEventListener("focusout", (evento) => {
-      if (evento.relatedTarget && !campo.contains(evento.relatedTarget)) cerrarSugerencias();
+      if (evento.relatedTarget && !campo.contains(evento.relatedTarget)) cerrar();
     });
     document.addEventListener("click", (evento) => {
-      if (!campo.contains(evento.target)) cerrarSugerencias();
+      if (!campo.contains(evento.target)) cerrar();
     });
-    cantidad.addEventListener("input", pintar);
+    return { cerrar };
+  }
+
+  /** Monta origen compartido, selector de criterio y los dos paneles. */
+  function montar(contenedor, datos) {
+    const disponibles = (datos || []).filter((a) => datosValidos(a) && entraEnCalculadora(a));
+    if (!contenedor || !disponibles.length) return;
+    const id = `eq-${++instancias}`;
+    const buscadorHTML = (nombre, etiqueta, atributo, listaAtributo, placeholder) =>
+      `<div class="eq-campo eq-buscar" data-eq-campo-${nombre}><label for="${id}-${nombre}">${etiqueta}</label>` +
+      `<div class="eq-buscador-entrada"><span class="eq-buscador-lupa">${LUPA}</span>` +
+      `<input id="${id}-${nombre}" type="search" autocomplete="off" spellcheck="false" ` +
+      `placeholder="${placeholder}" role="combobox" aria-autocomplete="list" aria-expanded="false" ` +
+      `aria-controls="${id}-${nombre}-lista" ${atributo}>` +
+      `<span class="eq-buscador-desplegar">${icono('<path d="m6 9 6 6 6-6"/>')}</span></div>` +
+      `<ul id="${id}-${nombre}-lista" class="eq-sugerencias" role="listbox" aria-label="${etiqueta}" hidden ${listaAtributo}></ul></div>`;
+    contenedor.innerHTML = '<div class="eq-controles">' +
+      buscadorHTML("origen", "Alimento de tu pauta", "data-eq-alimento", "data-eq-sugerencias", "Escribe: arroz, pollo, avena") +
+      `<div class="eq-campo eq-campo-cantidad"><label for="${id}-cantidad">Cantidad</label>` +
+      `<span class="eq-cantidad"><input id="${id}-cantidad" type="text" inputmode="decimal" ` +
+      `autocomplete="off" value="100" aria-describedby="${id}-ayuda" data-eq-cantidad><span>g</span></span>` +
+      `<span id="${id}-ayuda" class="eq-ayuda" data-eq-ayuda>${REDONDEO}</span></div></div>` +
+      '<div class="eq-referencia" data-eq-referencia hidden><p class="eq-resumen" data-eq-resumen></p>' +
+      '<p class="eq-macro" data-eq-macro></p>' +
+      `<details class="eq-criterio" data-eq-criterio-zona><summary>Cambiar criterio</summary>` +
+      `<label for="${id}-criterio">Qué quieres igualar</label><select id="${id}-criterio" data-eq-criterio>` +
+      '<option value="automatico">Automático por grupo</option><option value="hc">Hidratos</option>' +
+      '<option value="proteinas">Proteína</option><option value="grasas">Grasa</option>' +
+      '<option value="kcal">Kcal</option></select></details></div>' +
+      '<div class="eq-modos" role="tablist" aria-label="Cómo quieres buscar el cambio">' +
+      `<button type="button" role="tab" id="${id}-tab-elegir" aria-controls="${id}-panel-elegir" ` +
+      'aria-selected="true" data-eq-modo="elegir">Elegir alimento</button>' +
+      `<button type="button" role="tab" id="${id}-tab-recomendaciones" aria-controls="${id}-panel-recomendaciones" ` +
+      'aria-selected="false" tabindex="-1" data-eq-modo="recomendaciones">Ver recomendaciones</button></div>' +
+      '<p class="eq-vacio" role="status" data-eq-mensaje></p>' +
+      `<div id="${id}-panel-elegir" role="tabpanel" aria-labelledby="${id}-tab-elegir" data-eq-panel="elegir">` +
+      buscadorHTML("destino", "Lo quiero cambiar por", "data-eq-destino", "data-eq-sugerencias-destino", "Busca un sustituto") +
+      '<div data-eq-comparacion aria-live="polite" aria-atomic="true"></div></div>' +
+      `<div id="${id}-panel-recomendaciones" role="tabpanel" aria-labelledby="${id}-tab-recomendaciones" ` +
+      'data-eq-panel="recomendaciones" hidden><div data-eq-resultado></div></div>';
+
+    const q = (selector) => contenedor.querySelector(`[data-eq-${selector}]`);
+    const entrada = q("alimento");
+    const destinoInput = q("destino");
+    const cantidad = q("cantidad");
+    const criterio = q("criterio");
+    const comparacion = q("comparacion");
+    const resultado = q("resultado");
+    const referencia = q("referencia");
+    const mensaje = q("mensaje");
+    const tabs = [...contenedor.querySelectorAll("[data-eq-modo]")];
+    let origen = null;
+    let ultimoOrigen = null;
+    let destino = null;
+    let modo = "elegir";
+    const macroActual = () => criterio.value === "automatico" ? macroPorDefecto(origen) : criterio.value;
+    const candidatos = () => origen ? destinosDe(origen, disponibles).filter((a) => a[macroActual()] > 0) : [];
+
+    function pintar() {
+      tabs.forEach((t) => {
+        const activo = t.dataset.eqModo === modo;
+        t.setAttribute("aria-selected", String(activo));
+        t.tabIndex = activo ? 0 : -1;
+      });
+      contenedor.querySelectorAll("[data-eq-panel]").forEach((p) => { p.hidden = p.dataset.eqPanel !== modo; });
+      q("ayuda").textContent = notaCantidad(origen);
+      referencia.hidden = !origen;
+      q("campo-origen").classList.toggle("eq-confirmado", Boolean(origen));
+      q("campo-destino").classList.toggle("eq-confirmado", Boolean(destino));
+      const gramos = leerCantidad(cantidad.value);
+      cantidad.setAttribute("aria-invalid", String(gramos === null));
+      resultado.innerHTML = "";
+      comparacion.innerHTML = "";
+      destinoInput.disabled = !origen;
+      mensaje.textContent = "";
+      if (!origen) {
+        mensaje.textContent = "Busca el alimento de tu pauta y selecciónalo de la lista.";
+        return;
+      }
+      const macro = macroActual();
+      const automatico = criterio.value === "automatico";
+      q("macro").textContent = `Igualando ${ETIQUETAS[macro]}. ${automatico ? "Criterio automático por grupo." : "Criterio elegido manualmente."}`;
+      q("resumen").textContent = gramos === null ? origen.nombre :
+        `${String(gramos).replace(".", ",")} g de ${origen.nombre} aportan ${cifra(gramosDeMacro(origen, gramos, macro), 1)} ${macro === "kcal" ? "kcal" : `g de ${ETIQUETAS[macro]}`}.`;
+      if (gramos === null) {
+        mensaje.textContent = "Escribe una cantidad mayor que 0 g.";
+        return;
+      }
+      if (!(origen[macro] > 0)) {
+        mensaje.textContent = `Este alimento no aporta ${ETIQUETAS[macro]}. Elige otro criterio.`;
+        return;
+      }
+      if (!Number.isFinite(gramos * origen[macro])) {
+        q("resumen").textContent = origen.nombre;
+        mensaje.textContent = "No se puede calcular esta cantidad. Revisa los gramos de tu pauta.";
+        return;
+      }
+      resultado.innerHTML = bloques(alternativas(origen, gramos, macro, disponibles), origen);
+      if (!destino) {
+        comparacion.innerHTML = '<p class="eq-vacio">Elige el alimento que quieres usar para ver su cantidad.</p>';
+        return;
+      }
+      if (!(destino[macro] > 0)) {
+        comparacion.innerHTML = `<p class="eq-vacio">${escapar(destino.nombre)} no aporta ${ETIQUETAS[macro]}. Elige otro alimento o criterio.</p>`;
+        return;
+      }
+      const cambio = comparar(origen, gramos, destino, macro);
+      comparacion.innerHTML = cambio ? fichaComparacion(cambio) :
+        '<p class="eq-vacio">No se puede ofrecer una cantidad práctica con este cambio. Elige otro alimento o criterio.</p>';
+    }
+
+    const origenBuscador = montarBuscador(q("campo-origen"), entrada, q("sugerencias"),
+      () => disponibles, (elegido) => {
+        if (ultimoOrigen !== elegido.id) {
+          destino = null;
+          destinoInput.value = "";
+          criterio.value = "automatico";
+          q("criterio-zona").open = false;
+          destinoBuscador.cerrar();
+        }
+        origen = elegido;
+        ultimoOrigen = elegido.id;
+        pintar();
+      }, () => {
+        if (origen && entrada.value !== origen.nombre) origen = null;
+        destinoBuscador.cerrar();
+        pintar();
+      }, `${id}-origen`, "data-eq-elegir", () => escapar(SIN_RESULTADO), () => origen && origen.id);
+    const destinoBuscador = montarBuscador(q("campo-destino"), destinoInput, q("sugerencias-destino"),
+      candidatos, (elegido) => { destino = elegido; pintar(); }, () => {
+        if (destino && destinoInput.value !== destino.nombre) destino = null;
+        pintar();
+      }, `${id}-destino`, "data-eq-elegir-destino", () =>
+        'No hay coincidencias calculables en este grupo o sus grupos afines. ' +
+        '<button type="button" data-eq-ver-recomendaciones>Ver recomendaciones</button>', () => destino && destino.id);
+
+    function cambiarModo(nuevo, enfocar = false) {
+      modo = nuevo;
+      origenBuscador.cerrar();
+      destinoBuscador.cerrar();
+      pintar();
+      if (enfocar) tabs.find((t) => t.dataset.eqModo === modo).focus();
+    }
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => cambiarModo(tab.dataset.eqModo));
+      tab.addEventListener("keydown", (evento) => {
+        const indices = { ArrowRight: (i + 1) % tabs.length, ArrowLeft: (i + tabs.length - 1) % tabs.length,
+          Home: 0, End: tabs.length - 1 };
+        if (Object.prototype.hasOwnProperty.call(indices, evento.key)) {
+          evento.preventDefault();
+          cambiarModo(tabs[indices[evento.key]].dataset.eqModo, true);
+        }
+      });
+    });
+    contenedor.addEventListener("click", (evento) => {
+      const compararBoton = evento.target.closest("[data-eq-comparar]");
+      if (compararBoton && origen) {
+        destino = candidatos().find((a) => a.id === compararBoton.dataset.eqComparar) || null;
+        destinoInput.value = destino ? destino.nombre : "";
+        cambiarModo("elegir", true);
+      } else if (evento.target.closest("[data-eq-ver-recomendaciones]")) {
+        cambiarModo("recomendaciones", true);
+      }
+      const mas = evento.target.closest("[data-eq-mas]");
+      if (mas) {
+        mas.closest(".eq-bloque").querySelectorAll(".eq-oculta").forEach((fila) => fila.classList.remove("eq-oculta"));
+        const siguiente = mas.closest(".eq-bloque").querySelectorAll("[data-eq-comparar]")[POR_BLOQUE];
+        if (siguiente) siguiente.focus();
+        mas.parentElement.remove();
+      }
+    });
+    cantidad.addEventListener("input", () => { destinoBuscador.cerrar(); pintar(); });
+    criterio.addEventListener("change", () => { destinoBuscador.cerrar(); pintar(); });
     pintar();
   }
 
   const api = {
     macroPorDefecto, entraEnCalculadora, macroConmutable, gramosDeMacro, cantidadEquivalente,
     alternativas, ajustesDe, bloques, buscar, nombreGrupo, notaCantidad, montar,
+    datosValidos, leerCantidad, destinosDe, comparar, fichaComparacion,
   };
   global.NduranceEquivalencias = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
