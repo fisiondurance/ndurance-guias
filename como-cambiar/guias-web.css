@@ -1,0 +1,396 @@
+/* Guias web del deportista (brand book 2.2, seccion 10). Se carga detras de brand.css y solo
+   en las guias con `estilo: web`; las demas no la reciben. Cada regla empieza por .guia-web
+   para ganar a brand.css sin depender del orden. Las variables las inyecta render.py en
+   brand.css desde tools/brand/tokens.py. Escala en px (rem de 16): movil / desde 768 px. */
+
+/* ---- Base: fondo claro, ancho de 1100 px, texto en bandera ------------------------------ */
+.guia-web { background: var(--fondo-web); font-size: 1rem; line-height: 1.55; }
+.guia-web .pagina { max-width: 1100px; padding: 0 16px 48px; }
+.guia-web .contenido p, .guia-web .contenido li, .guia-web .aviso p,
+.guia-web .preambulo p, .guia-web .seccion > p {
+  text-align: left; hyphens: manual; -webkit-hyphens: manual;
+}
+.guia-web .seccion > p { max-width: 68ch; font-size: 1rem; }
+/* La entradilla bajo la banda va centrada en todo el ancho del apartado, con una frase por
+   linea: en escritorio cada frase cabe entera (Mario, 2026-11-25). «Volver al inicio»,
+   tambien centrado. */
+.guia-web .seccion > p:not(.volver):not(.recetas-proximamente) { max-width: none; text-align: center; }
+.guia-web .volver, .guia-web .seccion > .volver { margin: 48px auto 0; text-align: center; }
+.guia-web .volver a { font-weight: 600; font-size: .875rem; color: var(--primario-oscuro); }
+.guia-web .pie { margin-top: 64px; padding-top: 24px; font-size: .875rem; }
+.guia-web :focus-visible { outline: 2px solid var(--primario-tenue); outline-offset: 2px; }
+@media (min-width: 768px) {
+  .guia-web .pagina { padding: 0 32px 64px; }
+}
+
+/* ---- Portada: logo, titular y entrada centrados sobre negro, y las baldosas ------------ */
+.guia-web [data-portada][hidden] { display: none; }
+.guia-web .portada-web { background: var(--franja); color: var(--claro); }
+.guia-web .portada-interior { max-width: 1100px; margin: 0 auto; padding: 24px 16px 32px; text-align: center; }
+.guia-web .portada-logo { display: block; height: 64px; width: auto; margin: 8px auto 28px; }
+.guia-web .portada-web h1 {
+  margin: 0; color: var(--blanco); text-wrap: balance;
+  font: 700 2.5rem/.98 "Archivo Narrow", Inter, sans-serif; letter-spacing: .005em;
+}
+.guia-web .portada-web .cabecera-sub { margin: 12px 0 0; color: var(--claro-sec); }
+.guia-web .portada-web .preambulo p {
+  max-width: 56ch; margin: 16px auto 0; color: var(--claro-sec); text-align: center;
+}
+@media (min-width: 768px) {
+  .guia-web .portada-interior { padding: 40px 32px 48px; }
+  .guia-web .portada-logo { height: 80px; margin-bottom: 36px; }
+  .guia-web .portada-web h1 { font-size: 4rem; }
+  .guia-web .portada-web .preambulo p { font-size: 1.125rem; }
+}
+
+/* Baldosas de apartado: dos por fila en el movil y cuatro desde 768 px. */
+.guia-web .tarjetas-secciones {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  margin: 24px 0 0; padding: 0; border: 0; text-align: left;
+}
+.guia-web .tarjeta-seccion {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-height: 44px;
+  padding: 16px; border: 1px solid var(--oscuro-borde); border-radius: 8px;
+  background: var(--oscuro-sup); color: var(--claro); font: inherit; text-align: left; cursor: pointer;
+  transition: border-color .15s ease;
+}
+.guia-web .tarjeta-seccion:hover { border-color: var(--claro-sec); }
+.guia-web .tarjeta-icono {
+  width: 40px; height: 40px; display: grid; place-items: center; flex: none;
+  border-radius: 6px; background: var(--primario); color: var(--blanco);
+}
+.guia-web .tarjeta-icono svg { width: 22px; height: 22px; }
+.guia-web .tarjeta-titulo { font: 700 1.125rem/1.15 "Archivo Narrow", Inter, sans-serif; color: var(--claro); }
+.guia-web .tarjeta-descripcion { display: none; font-size: .875rem; line-height: 1.4; color: var(--claro-sec); }
+/* El apartado sin contenido todavia: fila discontinua a todo el ancho, en gris. */
+.guia-web .tarjeta-seccion[data-pronto] {
+  grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 12px; padding: 12px 16px;
+  border-style: dashed; background: transparent; color: var(--claro-sec);
+}
+.guia-web .tarjeta-seccion[data-pronto] .tarjeta-icono { width: 24px; height: 24px; background: transparent; color: var(--claro-sec); }
+.guia-web .tarjeta-seccion[data-pronto] .tarjeta-icono svg { width: 20px; height: 20px; }
+.guia-web .tarjeta-seccion[data-pronto] .tarjeta-titulo { font-size: 1rem; }
+.guia-web .tarjeta-seccion[data-pronto] .tarjeta-descripcion { display: block; }
+@media (min-width: 768px) {
+  .guia-web .tarjetas-secciones { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 32px; }
+  .guia-web .tarjeta-titulo { font-size: 1.25rem; }
+  .guia-web .tarjeta-descripcion { display: block; }
+}
+
+/* ---- Banda de apartado: negra a todo el ancho, con logo, titulo centrado y pestanas ---- */
+/* El negro se pinta fuera de la caja con border-image: no ensancha la pagina. */
+.guia-web .banda-apartado {
+  margin: 0 0 24px; padding-top: 8px; text-align: center; color: var(--claro);
+  background: var(--franja); border-image: conic-gradient(var(--franja) 0 0) fill 0 / / 0 100vw;
+}
+.guia-web .banda-logo { display: block; height: 44px; width: auto; margin: 8px auto 12px; }
+.guia-web .banda-apartado h2 {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  margin: 0; padding: 8px 0 16px; border: 0; color: var(--blanco); text-transform: none;
+  text-align: center; text-wrap: balance; font: 700 1.875rem/1.1 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web .banda-apartado h2 svg { flex: none; width: 28px; height: 28px; color: var(--primario); }
+@media (min-width: 768px) {
+  .guia-web .banda-logo { height: 52px; }
+  .guia-web .banda-apartado h2 { flex-direction: row; gap: 12px; font-size: 2.25rem; }
+  .guia-web .banda-apartado h2 svg { width: 32px; height: 32px; }
+}
+
+/* Pestanas: una fila que se desplaza en horizontal cuando no cabe y se centra cuando cabe
+   (los margenes automaticos del primero y del ultimo no dejan pestanas fuera de alcance). */
+.guia-web .pestanas {
+  display: flex; gap: 24px; overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+  border-top: 1px solid var(--oscuro-borde);
+}
+.guia-web .pestanas::-webkit-scrollbar { display: none; }
+.guia-web .pestanas a {
+  flex: none; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 12px 0 9px;
+  border-bottom: 3px solid transparent; color: var(--claro-sec); text-decoration: none;
+  font: 600 .875rem/1.2 Inter, sans-serif;
+}
+.guia-web .pestanas a:first-child { margin-left: auto; }
+.guia-web .pestanas a:last-child { margin-right: auto; }
+.guia-web .pestanas a svg { width: 18px; height: 18px; }
+.guia-web .pestanas a[data-volver] { color: var(--claro); }
+@media (max-width: 767px) {
+  /* Siempre a mano en el movil: fija al principio de la fila aunque la activa se centre,
+     con un degradado que funde lo que pasa por debajo. */
+  .guia-web .pestanas a[data-volver] { position: sticky; left: 0; z-index: 1; padding-right: 4px; background: var(--franja); }
+  .guia-web .pestanas a[data-volver]::after {
+    content: ""; position: absolute; top: 0; bottom: 0; right: -20px; width: 20px;
+    background: linear-gradient(90deg, var(--franja), transparent);
+  }
+}
+.guia-web .pestanas a[data-volver] svg { width: 16px; height: 16px; }
+.guia-web .pestanas a[aria-current] { color: var(--claro); border-bottom-color: var(--primario); }
+.guia-web .pestanas a[aria-current] svg { color: var(--primario); }
+.guia-web .pestanas a:focus-visible { outline-offset: -2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .guia-web * { transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* ---- Subtitulos de bloque dentro de los apartados ------------------------------------- */
+.guia-web .seccion h3 { margin: 32px 0 12px; font: 700 1.5rem/1.15 "Archivo Narrow", Inter, sans-serif; color: var(--tinta); }
+/* Bloque suelto del apartado (hoy, los formatos de arroz): titulo y tarjetas centrados, con
+   las tarjetas del ancho de las del catalogo (Mario, 2026-11-25). */
+.guia-web .seccion > h3 { text-align: center; }
+.guia-web .seccion > .productos { justify-content: center; }
+@media (min-width: 768px) {
+  .guia-web .seccion > .productos { grid-template-columns: repeat(auto-fit, calc((100% - 80px) / 6)); }
+}
+
+/* ---- Crudo a cocinado: dos tarjetas por fila en el movil y tres desde 768 px ----------- */
+.guia-web .conversion { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 16px 0 32px; }
+.guia-web .conversion-card {
+  padding: 12px; text-align: left; background: var(--blanco); border: 1px solid var(--filete); border-radius: 8px;
+}
+.guia-web .conversion-card h3 {
+  margin: 0 0 4px; color: var(--tinta); text-transform: none;
+  font: 700 1.125rem/1.1 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web .conversion-fila { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 4px 8px; }
+.guia-web .conversion-fila img { height: 64px; aspect-ratio: auto; }
+/* Los gramos encima, grandes; «En crudo» y «Cocinado» debajo, pequenos. */
+.guia-web .conversion-fila figcaption {
+  display: flex; flex-direction: column-reverse; margin-top: 8px;
+  font-size: .75rem; color: var(--texto-sec); white-space: nowrap;
+}
+.guia-web .conversion-fila figcaption strong {
+  margin-bottom: 2px; color: var(--tinta); font: 700 1.25rem/1 "Archivo Narrow", Inter, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+/* El factor, en tinta como cualquier cifra (la 2.1 pintaba el signo en magenta). */
+.guia-web .conversion-factor { font-size: 1.25rem; color: var(--tinta); }
+.guia-web .conversion-factor::first-letter { color: inherit; }
+/* En el movil, el factor sube a la cabecera de la tarjeta, junto al nombre: entre las dos
+   fotos no dejaba sitio a «Cocinado» con factores largos como «× 0,85». */
+@media (max-width: 767px) {
+  .guia-web .conversion-card {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "nombre nombre" "crudo cocinado";
+    gap: 8px; align-items: center;
+  }
+  /* El nombre ocupa la fila entera; el factor se apoya a la derecha de esa misma fila. */
+  .guia-web .conversion-card h3 { grid-area: nombre; min-width: 0; margin: 0; }
+  .guia-web .conversion-fila { display: contents; }
+  .guia-web .conversion-fila figure:first-of-type { grid-area: crudo; }
+  .guia-web .conversion-fila figure:last-of-type { grid-area: cocinado; }
+  .guia-web .conversion-factor { grid-column: 2; grid-row: 1; justify-self: end; padding: 2px 8px; border-radius: 6px; background: var(--gris); font-size: 1.125rem; }
+}
+@media (max-width: 359px) {
+  .guia-web .conversion-card h3 { font-size: 1rem; }
+  .guia-web .conversion-factor { padding: 2px 4px; font-size: 1rem; }
+}
+@media (min-width: 768px) {
+  .guia-web .conversion { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .guia-web .conversion-fila img { height: 88px; }
+  /* Centrado con las fotos, no con foto y pie juntos. */
+  .guia-web .conversion-factor { align-self: start; margin-top: 34px; }
+}
+
+/* ---- Frutas y verduras: bloques blancos; lado a lado desde 1024 px --------------------- */
+.guia-web .frutas-contenido, .guia-web .verduras-contenido {
+  margin: 16px 0 0; padding: 20px 16px; background: var(--blanco);
+  border: 1px solid var(--filete); border-radius: 8px;
+}
+.guia-web .seccion .alimentos-bloque-titulo { margin: 0 0 8px; font-size: 1.5rem; }
+.guia-web .verduras-contenido h3:not(.alimentos-bloque-titulo) { margin: 24px 0 12px; font-size: 1.25rem; }
+@media (min-width: 768px) {
+  .guia-web .frutas-contenido, .guia-web .verduras-contenido { padding: 32px; }
+}
+@media (min-width: 1024px) {
+  .guia-web .seccion:has(> .frutas-contenido):not([hidden]) {
+    display: grid; grid-template-columns: 5fr 7fr; column-gap: 16px; align-items: start;
+  }
+  .guia-web .seccion:has(> .frutas-contenido) > :not(.frutas-contenido):not(.verduras-contenido) { grid-column: 1 / -1; }
+}
+
+/* Etiquetas de alimentos: gris claro con radio 6, tambien dentro de los bloques blancos. */
+.guia-web .etiquetas li,
+.guia-web .frutas-contenido .etiquetas li, .guia-web .verduras-contenido .etiquetas li {
+  padding: 6px 12px; border-radius: 6px; background: var(--gris); font-size: .875rem;
+}
+
+/* Nota con icono: sustituye a los emojis. */
+.guia-web .nota { display: flex; gap: 10px; align-items: flex-start; }
+.guia-web .nota svg { flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--primario); }
+
+/* Recetas de verduras: foto 4:3 con el nombre sobre un velo oscuro. */
+.guia-web .verduras-tarjetas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 24px; }
+.guia-web .verdura-card { border: 0; border-radius: 8px; background: var(--franja); }
+.guia-web .verdura-card > summary { position: relative; }
+.guia-web .verdura-nombre {
+  position: absolute; inset: auto 0 0 0; display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 8px; padding: 32px 12px 10px; text-align: left; color: var(--blanco);
+  font: 700 1.125rem/1.1 "Archivo Narrow", Inter, sans-serif;
+  /* Respaldo para Safari anterior a iOS 16.2, que no entiende color-mix: el mismo #111111 al 82 %. */
+  background: linear-gradient(180deg, transparent, rgba(17, 17, 17, .82));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--franja) 82%, transparent));
+}
+.guia-web .verdura-nombre::after {
+  content: ""; flex: none; width: 18px; height: 18px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.guia-web .verdura-card[open] .verdura-nombre { position: static; padding-top: 10px; }
+.guia-web .verdura-cuerpo { background: var(--blanco); }
+.guia-web .verdura-dialogo { background: var(--blanco); }
+@media (min-width: 1024px) {
+  .guia-web .verduras-tarjetas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* «Proximamente»: hueco reconocible, sin parecer un error. */
+.guia-web .seccion > .recetas-proximamente {
+  margin: 0; padding: 32px 16px; text-align: center; color: var(--texto-sec);
+  border: 1px dashed var(--filete); border-radius: 8px; background: var(--blanco);
+  font: 700 1.25rem/1.2 "Archivo Narrow", Inter, sans-serif;
+}
+
+/* ---- Catalogo del supermercado: productos en estanteria ------------------------------- */
+/* Leyenda centrada como las demas entradillas: la muestra va en linea con el texto. */
+.guia-web .seccion > .catalogo-leyenda { display: block; color: var(--texto-sec); font-size: .875rem; }
+.guia-web .catalogo-leyenda-muestra { margin: 0 8px 0 0; vertical-align: -4px; border-radius: 4px; }
+
+/* Categorias: botones blancos en escritorio; en el movil, el desplegable (Mario, 2026-10-17). */
+/* Centrados bajo la leyenda, como ella (Mario, 2026-11-25). */
+.guia-web .indice { justify-content: center; gap: 8px; margin: 16px 0; }
+.guia-web .indice a {
+  display: flex; align-items: center; min-height: 40px; padding: 0 12px; border: 1px solid var(--filete);
+  border-radius: 6px; background: var(--blanco); color: var(--tinta); font-size: .875rem; font-weight: 600;
+}
+.guia-web .indice a:hover { border-color: var(--primario); }
+.guia-web .ir-categoria { margin: 16px 0 8px; }
+.guia-web .ir-categoria label, .guia-web .buscador label { margin-bottom: 6px; font-size: .875rem; font-weight: 600; color: var(--texto-sec); }
+.guia-web .ir-categoria select, .guia-web .buscador input {
+  min-height: 48px; border: 1px solid var(--filete); border-radius: 6px; background-color: var(--blanco);
+  font-size: 1rem;
+}
+.guia-web .ir-categoria select { font-weight: 600; }
+.guia-web .buscador { margin: 8px 0 24px; }
+/* Lupa dibujada como fondo del campo: sin icono suelto ni marcado nuevo. */
+.guia-web .buscador input {
+  padding-left: 44px;
+  background: var(--blanco) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23675E63'%3E%3Cpath d='M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z'/%3E%3C/svg%3E") 14px center / 20px 20px no-repeat;
+}
+
+/* Cada categoria: titulo grande en magenta y subcategoria en tinta, sin caja alrededor;
+   un filete separa una categoria de la siguiente (Mario, 2026-11-25). */
+.guia-web .categoria { margin: 40px 0 0; padding: 0; border: 0; background: none; }
+.guia-web .categoria + .categoria { padding-top: 32px; border-top: 1px solid var(--filete); }
+.guia-web .categoria > .banda {
+  margin: 0 0 4px; padding: 0; border: 0; background: none; text-transform: none;
+  font: 700 1.875rem/1.15 "Archivo Narrow", Inter, sans-serif; color: var(--primario);
+}
+.guia-web .categoria > h3 {
+  margin: 20px 0 12px; padding: 0; border: 0; color: var(--tinta);
+  font: 600 1.125rem/1.3 Inter, sans-serif;
+}
+.guia-web .categoria > .productos, .guia-web .categoria > .etiquetas { margin: 8px 0 16px; }
+.guia-web .categoria-aviso { margin: 12px 0; border-radius: 0 8px 8px 0; }
+
+/* Producto: la foto sobre una caja gris (el blanco de la foto se funde con ella) y el nombre
+   completo centrado debajo. Tres por fila en el movil y seis desde 768 px. */
+.guia-web .productos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; margin: 8px 0 24px; }
+.guia-web .producto { padding: 0; border: 0; background: none; text-align: center; }
+.guia-web .producto-caja {
+  position: relative; display: block; padding: 10px; border-radius: 8px; background: var(--gris); isolation: isolate;
+}
+.guia-web .producto-foto { mix-blend-mode: multiply; }
+.guia-web .producto-super {
+  top: 6px; right: 6px; left: auto; width: 24px; height: 24px; max-width: none; max-height: none; padding: 2px;
+  border: 1px solid var(--filete); border-radius: 50%; background: var(--blanco); object-fit: contain; object-position: center;
+}
+.guia-web .producto figcaption { margin-top: 8px; text-align: center; font-size: .75rem; font-weight: 600; line-height: 1.3; overflow-wrap: break-word; }
+/* Buenos procesados: la caja en amarillo; el guacamole, no (decision del 2026-11-11). */
+.guia-web .categoria[data-categoria="Buenos procesados"] .producto,
+.guia-web .categoria[data-categoria="Buenos procesados"] .producto[data-aparicion="GUIA-0153"] { background: none; }
+.guia-web .categoria[data-categoria="Buenos procesados"] .producto-caja { background: var(--aviso-fondo); }
+.guia-web .categoria[data-categoria="Buenos procesados"] .producto[data-aparicion="GUIA-0153"] .producto-caja { background: var(--gris); }
+@media (max-width: 359px) {
+  .guia-web .productos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 768px) {
+  .guia-web .productos { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+  .guia-web .producto figcaption { font-size: .875rem; }
+}
+
+/* ---- Calculadora de cantidades -------------------------------------------------------- */
+/* Panel de controles en superficie blanca; campos de 48 px con el foco del nucleo. */
+.guia-web .eq-controles { padding: 16px; background: var(--blanco); border: 1px solid var(--filete); border-radius: 8px; }
+.guia-web .eq-campo label { font-size: .875rem; color: var(--texto-sec); }
+.guia-web .eq-campo select, .guia-web .eq-campo input { min-height: 48px; }
+.guia-web .eq-sugerencias { border-radius: 8px; }
+.guia-web .eq-referencia { border-radius: 0 8px 8px 0; }
+@media (min-width: 768px) {
+  .guia-web .eq-controles { padding: 20px 24px; }
+}
+
+/* Los dos modos, como un conmutador segmentado. */
+.guia-web .eq-modos { gap: 4px; padding: 4px; border: 0; border-radius: 8px; background: var(--gris); }
+.guia-web .eq-modos button {
+  min-height: 44px; border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--texto-sec); font-size: .875rem;
+}
+.guia-web .eq-modos button[aria-selected="true"] { border-color: var(--filete); background: var(--blanco); color: var(--tinta); }
+
+/* Resultados: cada grupo en una tarjeta blanca con su cabecera; gramos grandes en tinta. */
+.guia-web .equivalencias .eq-categoria > h3 { margin: 32px 0 4px; font-size: 1.25rem; }
+.guia-web .equivalencias .eq-nota { max-width: 68ch; }
+.guia-web .equivalencias .eq-bloque {
+  margin-top: 16px; overflow: hidden; background: var(--blanco); border: 1px solid var(--filete); border-radius: 8px;
+}
+.guia-web .equivalencias .eq-bloque > h4,
+.guia-web .equivalencias .eq-categoria > .eq-bloque:first-of-type > h4,
+.guia-web .eq-categoria-ajuste .eq-bloque:first-of-type > h4 {
+  margin: 0; padding: 10px 16px; border: 0; border-bottom: 1px solid var(--filete); background: none;
+  text-transform: none; color: var(--texto-sec); font: 600 .875rem/1.3 Inter, sans-serif;
+}
+.guia-web .eq-lista li { padding: 12px 16px; }
+.guia-web .eq-lista li:last-child { border-bottom: 0; }
+.guia-web .eq-gramos { font-size: 1.875rem; line-height: 1; }
+.guia-web .equivalencias .eq-comparar { gap: 6px; font-size: .875rem; }
+.guia-web .eq-comparar > span:last-child { text-decoration: underline; text-underline-offset: 2px; }
+.guia-web .eq-estado { border: 0; border-radius: 4px; background: var(--gris); font-size: .75rem; }
+.guia-web .eq-mas { margin: 0; padding: 12px 16px; border-top: 1px solid var(--filete); }
+.guia-web .eq-lista + .eq-mas { border-top: 1px solid var(--filete); }
+
+/* Opciones que requieren ajuste: el bloque amarillo, con radio. */
+.guia-web .eq-categoria-ajuste { overflow: hidden; border-radius: 8px; }
+.guia-web .equivalencias .eq-categoria-ajuste > summary { font-size: 1.25rem; }
+.guia-web .eq-categoria-ajuste .eq-ajuste { border-radius: 4px; }
+
+/* Alimento elegido: la cifra grande, en tinta (la seccion 7 prohibe cifras grandes en magenta). */
+.guia-web .eq-cantidad-destino { color: var(--tinta); }
+.guia-web .eq-aviso-elegido { border-radius: 0 8px 8px 0; }
+
+/* ---- Documento sin apartados («Como cambiar un alimento de tu pauta») ------------------ */
+/* Portada oscura con el logo y el titular en caja normal; debajo, una columna de lectura
+   centrada. Los titulos van en caja normal: la regla de mayusculas es solo de los apartados. */
+.guia-web .portada-web--documento .portada-interior { padding-bottom: 40px; }
+.guia-web .portada-web--documento h1 { font-size: 2.25rem; line-height: 1.05; }
+.guia-web:has(.portada-web--documento) .contenido { max-width: 68ch; margin: 0 auto; padding-top: 32px; }
+.guia-web:has(.portada-web--documento) .contenido > p { max-width: none; }
+.guia-web:has(.portada-web--documento) .contenido h2 {
+  margin: 40px 0 12px; padding: 0; border: 0; color: var(--tinta); text-transform: none;
+  font: 700 1.5rem/1.15 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web:has(.portada-web--documento) .contenido h3 { margin: 24px 0 8px; font-size: 1.25rem; }
+.guia-web:has(.portada-web--documento) .contenido ul { padding-left: 20px; }
+.guia-web:has(.portada-web--documento) .contenido li { margin-bottom: 6px; }
+.guia-web:has(.portada-web--documento) .contenido li::marker { color: var(--primario); }
+/* Pasos numerados: solo en una secuencia real, la lista ordenada. */
+.guia-web:has(.portada-web--documento) .contenido ol { counter-reset: paso; list-style: none; padding: 0; margin: 16px 0 24px; }
+.guia-web:has(.portada-web--documento) .contenido ol > li {
+  counter-increment: paso; position: relative; min-height: 36px; margin: 0 0 12px; padding: 4px 0 4px 52px;
+}
+.guia-web:has(.portada-web--documento) .contenido ol > li::before {
+  content: counter(paso); position: absolute; left: 0; top: 0; width: 36px; height: 36px;
+  display: grid; place-items: center; border-radius: 50%; background: var(--tinta); color: var(--blanco);
+  font: 700 1.25rem/1 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web:has(.portada-web--documento) .contenido ol > li:not(:last-child)::after {
+  content: ""; position: absolute; left: 17px; top: 36px; bottom: -12px; width: 2px; background: var(--filete);
+}
+@media (min-width: 768px) {
+  .guia-web .portada-web--documento h1 { font-size: 3rem; }
+}

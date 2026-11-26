@@ -355,6 +355,12 @@
    * Las alternativas en bloques: su familia, el resto de su grupo y el grupo afin. Cada bloque
    * ensena sus primeras y guarda el resto tras su propio boton.
    */
+  /** Mayusculas de titulo de las guias web (brand book 2.2) si la guia carga titulos.js. */
+  function titular(texto) {
+    const t = typeof globalThis !== "undefined" ? globalThis.NDTitulos : undefined;
+    return t ? t.capitalizar(texto) : texto;
+  }
+
   function _familias(filas, origen) {
     const suyas = filas.filter((a) => a.misma_familia);
     const resto = filas.filter((a) => !a.misma_familia && !a.afin);
@@ -366,7 +372,7 @@
         lista.length > POR_BLOQUE
           ? `<p class="eq-mas"><button type="button" data-eq-mas>Ver ${lista.length - POR_BLOQUE} más</button></p>`
           : "";
-      partes.push(`<div class="eq-bloque"><h4>${escapar(titulo)}</h4>${_lista(lista)}${mas}</div>`);
+      partes.push(`<div class="eq-bloque"><h4>${escapar(titular(titulo))}</h4>${_lista(lista)}${mas}</div>`);
     };
     anadir(origen.familia || "De la misma familia", suyas);
     anadir(suyas.length ? "Otras opciones" : nombreGrupo(origen.grupo), resto);
@@ -382,7 +388,7 @@
     const directas = filas.filter((a) => !a.ajustes || !a.ajustes.length);
     const ajustar = filas.filter((a) => a.ajustes && a.ajustes.length);
     const partes = [
-      '<div class="eq-categoria"><h3>Sustituciones directas</h3>' +
+      `<div class="eq-categoria"><h3>${titular("Sustituciones directas")}</h3>` +
       (directas.length
         ? '<p class="eq-nota">Igualan el nutriente de referencia sin superar los márgenes de energía y los demás nutrientes. Comprueba que el cambio tenga sentido en tu receta.</p>' + _familias(directas, origen)
         : '<p class="eq-vacio">Para esta cantidad no hay sustituciones directas dentro de los márgenes.</p>') +

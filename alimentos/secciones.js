@@ -11,15 +11,36 @@
   const secciones = tarjetas.map((t) => document.getElementById(t.dataset.seccion));
   // La entrada solo acompana a las tarjetas en la portada: con un apartado abierto sobra.
   const preambulo = document.querySelector(".preambulo");
+  // Guias web (brand book 2.2): la portada oscura lleva logo, titular, entrada y tarjetas, y
+  // se oculta entera al abrir un apartado, que trae su propia banda con pestanas. Sin ella
+  // (bidon y gel), las tarjetas pasan a modo compacto como siempre.
+  const portada = document.querySelector("[data-portada]");
   let abierta = null;
+
+  // En el movil las pestanas se desplazan en horizontal: la del apartado abierto, al centro.
+  function centrarPestana() {
+    const activa = abierta && abierta.querySelector(".pestanas a[aria-current]");
+    if (!activa) return;
+    const fila = activa.parentElement;
+    const rf = fila.getBoundingClientRect();
+    const ra = activa.getBoundingClientRect();
+    fila.scrollLeft += ra.left + ra.width / 2 - (rf.left + rf.width / 2);
+  }
+
+  function irArriba() {
+    if (portada) window.scrollTo({ top: 0 });
+    else nav.scrollIntoView({ block: "start" });
+  }
 
   function pintar() {
     secciones.forEach((s, i) => {
       s.hidden = abierta !== s;
       tarjetas[i].setAttribute("aria-pressed", String(abierta === s));
     });
-    nav.classList.toggle("compacta", abierta !== null);
+    nav.classList.toggle("compacta", abierta !== null && !portada);
     if (preambulo) preambulo.hidden = abierta !== null;
+    if (portada) portada.hidden = abierta !== null;
+    centrarPestana();
   }
 
   function abrir(seccion, desplazar) {
@@ -27,7 +48,7 @@
     pintar();
     if (seccion) {
       history.replaceState(null, "", "#" + seccion.id);
-      if (desplazar) nav.scrollIntoView({ block: "start" });
+      if (desplazar) irArriba();
     } else {
       history.replaceState(null, "", location.pathname + location.search);
       if (desplazar) window.scrollTo({ top: 0 });
@@ -51,7 +72,7 @@
       abierta = contenedora;
       pintar();
       if (objetivo !== contenedora) objetivo.scrollIntoView({ block: "start" });
-      else nav.scrollIntoView({ block: "start" });
+      else irArriba();
     } else {
       abrir(null, false);
     }
