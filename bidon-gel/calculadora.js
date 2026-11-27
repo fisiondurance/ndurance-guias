@@ -4,7 +4,8 @@
  * la ficha imprimible y copia el enlace con la pauta. Los calculos y el texto del
  * resultado viven en los modulos puros; aqui solo se lee y se escribe la pagina.
  *
- * Spec: docs/specs/2026-10-03-calculadora-bidon-gel-brand-html.md
+ * Spec: docs/specs/2026-10-03-calculadora-bidon-gel-brand-html.md. Version publica (sin pauta en
+ * el enlace) y de cliente: docs/specs/2026-11-26-bidon-gel-web-y-publica.md
  */
 (function (global) {
   'use strict';
@@ -19,6 +20,14 @@
   const ICONO_BIDON = '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="20.5" y="4" width="7" height="4" rx="1"/><rect x="17" y="8" width="14" height="5" rx="1.5"/><rect x="15" y="13" width="18" height="31" rx="5"/><line x1="15" y1="25" x2="33" y2="25"/></svg>';
   const ICONO_GEL = '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="21" y="4" width="6" height="4" rx="1.5"/><path d="M19.5 8 h9 l-1 6 h-7 z"/><path d="M20 14 C 14 17, 12 24, 12 30 C 12 38, 17 42, 24 42 C 31 42, 36 38, 36 30 C 36 24, 34 17, 28 14 Z"/></svg>';
   const AVISO_ENLACE = 'Algún dato del enlace no era válido: revisa los campos antes de preparar.';
+  // Marca de la tarjeta elegida (spec 2026-11-26-controles-guias-web.md): check blanco sobre magenta.
+  const MARCA_ELEGIDA = '<span class="calc-prep-marca" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false">' +
+    '<polyline points="5 12 10 17 19 7"/></svg></span>';
+  // Solo en la version publica: quien llega desde redes no trae los gramos de su pauta. Una linea
+  // que lleva a la llamada, donde ya se explica de que depende (Mario, 2026-11-27).
+  const AYUDA_GRAMOS = '<p class="calc-ayuda" data-solo-publica hidden>¿No sabes cuántos gramos poner? ' +
+    '<a href="#llamada">Cómo saber el tuyo</a></p>';
   const PREFIJO = { bidon: 'cb', gel: 'cg' };
   // Campo semantico de los errores del motor -> control visible.
   const CAMPO_ERROR = {
@@ -47,8 +56,9 @@
   const opcionesRatio = () => opciones(P.RATIOS.map((r) => [r, P.ETIQUETAS_RATIO[r]]).concat([['custom', 'Personalizado']]));
   const mayuscula = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
   const nota = (texto, id) => `<span class="calc-nota"${id ? ` id="${id}"` : ''}>${texto}</span>`;
-  const numero = (id, min, paso, teclado = 'numeric', max = '') =>
-    `<input id="${id}" type="number" min="${min}"${max === '' ? '' : ` max="${max}"`} step="${paso}" inputmode="${teclado}">`;
+  const numero = (id, min, paso, teclado = 'numeric', max = '', ejemplo = '') =>
+    `<input id="${id}" type="number" min="${min}"${max === '' ? '' : ` max="${max}"`} step="${paso}" inputmode="${teclado}"` +
+    `${ejemplo ? ` placeholder="${ejemplo}"` : ''}>`;
   const campo = (clase, id, etiqueta, control, extra = '', modo = '') =>
     `<div class="calc-campo ${clase}"${modo ? ` data-solo-modo="${modo}"` : ''}>` +
     `<label for="${id}">${etiqueta}</label>${control}${extra}</div>`;
@@ -82,7 +92,8 @@
     return '<section data-bloque="bidon">' +
       selectorModo('Modo de cálculo del bidón', [['cantidad', 'Cantidad de CHO'], ['concentracion', 'Concentración']]) +
       '<div class="calc-panel">' +
-      campo('calc-corto', 'cb-cho', 'CHO del bidón (g)', numero('cb-cho', 0, 1), nota('Gramos de hidratos deseados.'), 'cantidad') +
+      campo('calc-corto', 'cb-cho', 'CHO del bidón (g)', numero('cb-cho', 0, 1, 'numeric', '', 'p. ej. 60'),
+        nota('Gramos de hidratos deseados.') + AYUDA_GRAMOS, 'cantidad') +
       campo('calc-corto calc-ancho-movil', 'cb-conc', 'Concentración (%)',
         '<div class="calc-deslizador"><input id="cb-conc" type="range" min="4" max="12" step="0.5" ' +
         'aria-label="Concentración de carbohidratos del bidón, de 4 a 12 por ciento">' +
@@ -105,7 +116,8 @@
     return '<section data-bloque="gel" hidden>' +
       selectorModo('Modo de cálculo del gel', [['softflask', 'Por softflask'], ['formato', 'Por formato']]) +
       '<div class="calc-panel">' +
-      campo('calc-corto', 'cg-cho', 'CHO total del gel (g)', numero('cg-cho', 0, 1), nota('Gramos de hidratos del softflask.')) +
+      campo('calc-corto', 'cg-cho', 'CHO total del gel (g)', numero('cg-cho', 0, 1, 'numeric', '', 'p. ej. 90'),
+        nota('Gramos de hidratos del softflask.') + AYUDA_GRAMOS) +
       campo('calc-corto', 'cg-ml', 'Capacidad del softflask (ml)',
         `<select id="cg-ml">${opciones(P.CAPACIDADES_GEL.map((ml) => [ml, `${ml} ml`]))}</select>`, '', 'softflask') +
       campo('calc-corto', 'cg-formato', 'Formato del gel', `<select id="cg-formato">${opciones(formatos)}</select>`,
@@ -122,12 +134,15 @@
   }
 
   function htmlFormulario() {
-    const tarjeta = (prep, icono, texto) =>
-      `<button type="button" class="tarjeta-seccion" data-prep="${prep}">` +
-      `<span class="calc-prep-icono">${icono}</span><span class="tarjeta-titulo">${texto}</span></button>`;
+    // Tarjetas propias, no las baldosas de las guias: guias-web.css las pinta para fondo oscuro.
+    const tarjeta = (prep, icono, texto, descripcion) =>
+      `<button type="button" class="calc-prep-opcion" data-prep="${prep}">${MARCA_ELEGIDA}` +
+      `<span class="calc-prep-icono">${icono}</span><span class="calc-prep-nombre">${texto}</span>` +
+      `<span class="calc-prep-desc">${descripcion}</span></button>`;
     return '<p class="calc-pregunta">Empieza eligiendo qué vas a preparar</p>' +
       '<div class="calc-prep" role="group" aria-label="Qué quieres preparar">' +
-      tarjeta('bidon', ICONO_BIDON, 'Bidón') + tarjeta('gel', ICONO_GEL, 'Gel casero') + '</div>' +
+      tarjeta('bidon', ICONO_BIDON, 'Bidón', 'Bebida con hidratos y sales.') +
+      tarjeta('gel', ICONO_GEL, 'Gel casero', 'Mezcla concentrada en un softflask, en tomas pequeñas con agua.') + '</div>' +
       htmlBidon() + htmlGel();
   }
 
@@ -148,6 +163,8 @@
     const calculado = { bidon: false, gel: false };
     const enlace = E.deQuery(global.location.search);
     const inicial = enlace ? enlace.estado : E.estadoPorDefecto();
+    // Sin pauta en el enlace, la pagina es la version publica: gramos vacios, ayuda y llamada.
+    const publica = !E.traePauta(global.location.search);
     let choPrevio = null;
 
     function leer(prep) {
@@ -274,7 +291,7 @@
       }
       const r = prep === 'bidon' ? B.calcularBidon(entrada) : G.calcularGel(entrada);
       const resultado = en(prep, '[data-resultado]');
-      resultado.innerHTML = prep === 'bidon' ? R.htmlResultadoBidon(r, e) : R.htmlResultadoGel(r, e);
+      resultado.innerHTML = prep === 'bidon' ? R.htmlResultadoBidon(r, e, { publica }) : R.htmlResultadoGel(r, e);
       resultado.hidden = false;
       en(prep, '[data-acciones]').hidden = prep === 'gel' && !r.viable;
       return { r, e };
@@ -346,7 +363,10 @@
     function imprimir(prep) {
       const calculo = calcular(prep);
       if (!calculo || (prep === 'gel' && !calculo.r.viable)) return;
-      const ficha = prep === 'bidon' ? F.fichaBidon(calculo.r, calculo.e) : F.fichaGel(calculo.r, calculo.e);
+      // URL absoluta del logo de la cabecera: vale en la pagina servida y en el autocontenido.
+      const logoPagina = raiz.ownerDocument.querySelector('.portada-logo');
+      const opciones = { publica, logo: logoPagina ? logoPagina.src : '' };
+      const ficha = prep === 'bidon' ? F.fichaBidon(calculo.r, calculo.e, opciones) : F.fichaGel(calculo.r, calculo.e, opciones);
       abrirImpresion(prep, ficha);
     }
 
@@ -393,8 +413,15 @@
     escribir('bidon', inicial.bidon);
     escribir('gel', inicial.gel);
     choPrevio = B.resolverCho(P.aEntradaBidon(inicial.bidon));
+    if (publica) {
+      // Con 60 g ya puestos, un desconocido se quedaria con esa cifra como si fuera la suya.
+      $('#cb-cho').value = '';
+      $('#cg-cho').value = '';
+      choPrevio = null;
+    }
+    raiz.ownerDocument.querySelectorAll('[data-solo-publica]').forEach((el) => { el.hidden = !publica; });
     elegirPreparacion(inicial.prep);
-    if (enlace) {
+    if (enlace && !publica) {
       en(inicial.prep, '[data-aviso-enlace]').hidden = enlace.errores.length === 0;
       calcularYMostrar(inicial.prep);
     }

@@ -1,0 +1,127 @@
+/* Calculadora de bidon y gel con la seccion 10 del brand book (guias web del deportista).
+   Hoja propia de bidon: va detras de brand.css y guias-web.css y solo en esta guia, asi que lo
+   que se cambie aqui no toca la guia de alimentos. Cada regla empieza por .guia-web y pinta
+   solo con las variables de marca que inyecta render.py desde tools/brand/tokens.py.
+   Spec: docs/specs/2026-11-26-bidon-gel-web-y-publica.md */
+
+/* ---- Cabecera: la entradilla, centrada y en una medida de lectura ---------------------- */
+.guia-web .portada-web .cabecera-sub { max-width: 56ch; margin: 16px auto 0; }
+
+/* ---- Selector de preparacion: dos tarjetas claras, no las baldosas oscuras -------------- */
+.guia-web .calc .calc-pregunta {
+  margin: 0 0 16px; text-align: center; color: var(--tinta);
+  font: 700 1.25rem/1.2 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web .calc-prep {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+  max-width: 520px; margin: 0 auto 24px;
+}
+.guia-web .calc-prep-opcion {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 16px 12px; text-align: center; cursor: pointer;
+  font: inherit; color: var(--tinta); background: var(--blanco);
+  border: 1px solid var(--texto-sec); border-radius: 8px;
+  transition: border-color 150ms ease;
+}
+.guia-web .calc-prep-opcion:hover { border-color: var(--primario); }
+/* Foco con el tabulador: contorno magenta separado, visible tambien en la tarjeta ya elegida. */
+.guia-web .calc-prep-opcion:focus-visible { outline: 2px solid var(--primario); outline-offset: 2px; }
+/* Marca de verificacion de la tarjeta elegida (spec de controles, 2026-11-26). */
+.guia-web .calc-prep-marca {
+  display: none; position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
+  place-items: center; border-radius: 50%; background: var(--primario); color: var(--blanco);
+}
+.guia-web .calc-prep-marca svg { width: 14px; height: 14px; }
+.guia-web .calc-prep-opcion[aria-pressed="true"] .calc-prep-marca { display: grid; }
+.guia-web .calc-prep-opcion[aria-pressed="true"] {
+  border-color: var(--primario); box-shadow: inset 0 0 0 1px var(--primario);
+}
+.guia-web .calc-prep-icono { width: 40px; height: 40px; color: var(--texto-sec); }
+.guia-web .calc-prep-opcion[aria-pressed="true"] .calc-prep-icono { color: var(--primario); }
+.guia-web .calc-prep-nombre { font: 700 1.125rem/1.15 "Archivo Narrow", Inter, sans-serif; color: var(--tinta); }
+.guia-web .calc-prep-desc { font-size: .875rem; line-height: 1.4; color: var(--texto-sec); }
+
+/* ---- Panel de campos ------------------------------------------------------------------ */
+.guia-web .calc-panel {
+  padding: 20px; background: var(--blanco); border: 1px solid var(--filete); border-radius: 8px;
+}
+.guia-web .calc-campo > label { font-size: .875rem; font-weight: 600; color: var(--texto-sec); }
+.guia-web .calc-ayuda { margin: 8px 0 0; font-size: .875rem; line-height: 1.45; color: var(--texto-sec); }
+.guia-web .calc-ayuda a { font-weight: 600; color: var(--primario-oscuro); }
+
+/* ---- Botones ---------------------------------------------------------------------------- */
+.guia-web .calc-boton { min-height: 48px; border-radius: 6px; }
+.guia-web .calc-boton-secundario { min-height: 44px; border-radius: 6px; }
+
+/* ---- Resultado: superficie blanca, filas como la calculadora de alimentos ---------------- */
+.guia-web .calc-resultado {
+  margin: 24px 0 0; padding: 20px; background: var(--blanco);
+  border: 1px solid var(--filete); border-radius: 8px;
+}
+.guia-web .calc-titulo { font-size: 1.5rem; color: var(--tinta); }
+/* Recibe el foco al calcular (lectores de pantalla), pero no es un control: sin recuadro. */
+.guia-web .calc-titulo:focus, .guia-web .calc-titulo:focus-visible { outline: none; }
+.guia-web .calc-resumen strong { color: var(--tinta); }
+.guia-web .calc h3 { font: 700 1.125rem/1.25 "Archivo Narrow", Inter, sans-serif; color: var(--tinta); }
+.guia-web .calc-ingredientes li { padding: 12px 0; }
+.guia-web .calc-ing-nombre { font-size: 1rem; font-weight: 600; }
+.guia-web .calc-ing-detalle { font-size: .875rem; color: var(--texto-sec); }
+.guia-web .calc-ing-gramos { font-size: 1.875rem; color: var(--tinta); }
+.guia-web .calc-nivel { padding: 2px 8px; border-radius: 4px; font-size: .75rem; }
+
+/* Pasos numerados de la seccion 10: numero blanco en un circulo de tinta, unidos por un filete. */
+.guia-web .calc-pasos li { min-height: 36px; padding-left: 52px; margin-bottom: 12px; }
+.guia-web .calc-pasos li::before {
+  top: 0; left: 0; width: 36px; height: 36px; display: grid; place-items: center;
+  background: var(--tinta); color: var(--blanco); border-radius: 50%; text-align: center;
+  font: 700 1.25rem/1 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web .calc-pasos li:not(:last-child)::after {
+  content: ""; position: absolute; left: 17px; top: 40px; bottom: -10px;
+  border-left: 1px solid var(--filete);
+}
+
+/* Avisos y cierre. */
+.guia-web .calc .aviso { border-left-width: 4px; border-radius: 0 8px 8px 0; }
+.guia-web .calc .aviso-ambar { border-left-color: var(--aviso); background: var(--gris); }
+.guia-web .calc-cierre { margin: 24px 0 0; font-size: .9375rem; color: var(--tinta); }
+
+/* ---- Bloque de la llamada: solo en la version publica ----------------------------------- */
+.guia-web .llamada {
+  max-width: 680px; margin: 64px auto 0; padding: 24px 20px; text-align: center;
+  background: var(--blanco); border: 1px solid var(--filete); border-radius: 8px;
+}
+.guia-web .llamada[hidden] { display: none; }
+.guia-web .llamada h2 {
+  margin: 0 0 12px; padding: 0; border: 0; text-transform: none; color: var(--tinta);
+  font: 700 1.5rem/1.15 "Archivo Narrow", Inter, sans-serif;
+}
+.guia-web .llamada p { max-width: 56ch; margin: 0 auto 16px; text-align: center; }
+.guia-web .llamada p:last-child { margin-bottom: 0; font-size: .875rem; color: var(--texto-sec); }
+.guia-web .llamada-boton {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+  padding: 12px 24px; border-radius: 6px; text-decoration: none;
+  font: 600 1rem/1.2 Inter, system-ui, sans-serif; color: var(--blanco); background: var(--primario);
+  transition: background-color 150ms ease;
+}
+.guia-web .llamada-boton:hover { background: var(--primario-oscuro); }
+.guia-web .llamada-boton:focus-visible { outline: 2px solid var(--primario); outline-offset: 2px; }
+
+/* En el movil, en la version publica, los gramos ocupan la fila entera: su ayuda en media
+   columna se partia en siete lineas estrechas. Con pauta la ayuda va oculta y el campo
+   vuelve a ir al lado de la capacidad. */
+@media (max-width: 767px) {
+  .guia-web .calc-campo:has(> .calc-ayuda:not([hidden])) { grid-column: 1 / -1; }
+}
+
+@media (min-width: 768px) {
+  .guia-web .portada-web .cabecera-sub { font-size: 1.125rem; }
+  .guia-web .calc-prep-nombre { font-size: 1.25rem; }
+  .guia-web .calc-panel, .guia-web .calc-resultado { padding: 32px; }
+  .guia-web .calc-titulo { font-size: 1.875rem; }
+  .guia-web .llamada { padding: 40px 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guia-web .calc-prep-opcion, .guia-web .llamada-boton { transition: none; }
+}

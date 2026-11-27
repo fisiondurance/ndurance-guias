@@ -590,6 +590,8 @@
       resultado.innerHTML = "";
       comparacion.innerHTML = "";
       destinoInput.disabled = !origen;
+      // Desactivado, el campo dice que falta (spec 2026-11-26-controles-guias-web.md).
+      destinoInput.placeholder = origen ? "Busca un sustituto" : "Elige antes tu alimento";
       mensaje.textContent = "";
       if (!origen) {
         mensaje.textContent = "Busca el alimento de tu pauta y selecciónalo de la lista.";

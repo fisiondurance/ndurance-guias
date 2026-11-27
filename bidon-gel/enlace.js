@@ -108,7 +108,21 @@
     return claves.filter((clave) => validar[clave](String(datos[clave])) === null);
   }
 
-  const api = { CLAVES, estadoPorDefecto, aQuery, deQuery, erroresEstado };
+  /**
+   * ¿El enlace trae la pauta de un cliente? Si: `prep` valido y el dato principal de su modo
+   * (`conc` en el bidon por concentracion, `cho` en el resto), valga o no; un valor no valido
+   * sale con el aviso de enlace. Sin pauta, la pagina es la version publica.
+   * Spec: docs/specs/2026-11-26-bidon-gel-web-y-publica.md
+   */
+  function traePauta(search) {
+    const params = new URLSearchParams(search);
+    const prep = params.get('prep');
+    if (prep !== 'bidon' && prep !== 'gel') return false;
+    const principal = prep === 'bidon' && params.get('modo') === 'concentracion' ? 'conc' : 'cho';
+    return params.has(principal);
+  }
+
+  const api = { CLAVES, estadoPorDefecto, aQuery, deQuery, erroresEstado, traePauta };
   global.NduranceEnlace = api;
   if (enNode) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

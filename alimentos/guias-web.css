@@ -363,34 +363,69 @@
 .guia-web .eq-cantidad-destino { color: var(--tinta); }
 .guia-web .eq-aviso-elegido { border-radius: 0 8px 8px 0; }
 
-/* ---- Documento sin apartados («Como cambiar un alimento de tu pauta») ------------------ */
-/* Portada oscura con el logo y el titular en caja normal; debajo, una columna de lectura
-   centrada. Los titulos van en caja normal: la regla de mayusculas es solo de los apartados. */
-.guia-web .portada-web--documento .portada-interior { padding-bottom: 40px; }
-.guia-web .portada-web--documento h1 { font-size: 2.25rem; line-height: 1.05; }
-.guia-web:has(.portada-web--documento) .contenido { max-width: 68ch; margin: 0 auto; padding-top: 32px; }
-.guia-web:has(.portada-web--documento) .contenido > p { max-width: none; }
-.guia-web:has(.portada-web--documento) .contenido h2 {
-  margin: 40px 0 12px; padding: 0; border: 0; color: var(--tinta); text-transform: none;
-  font: 700 1.5rem/1.15 "Archivo Narrow", Inter, sans-serif;
+/* ---- Controles (brand book 2.2.2; spec docs/specs/2026-11-26-controles-guias-web.md) -------
+   Borde de los controles en el texto secundario: 6,25:1 sobre blanco, por encima del 3:1 que
+   pide WCAG 1.4.11 (el filete #E5E5E5 daba 1,26:1 y no invitaba a pulsar). Al enfocar, borde
+   magenta y anillo tenue. Van al final para ganar a las reglas anteriores de esta hoja. */
+.guia-web .eq-campo input, .guia-web .eq-campo select,
+.guia-web .calc-campo input[type="number"], .guia-web .calc-campo select,
+.guia-web .ir-categoria select, .guia-web .buscador input {
+  min-height: 48px; border: 1px solid var(--texto-sec); border-radius: 6px;
 }
-.guia-web:has(.portada-web--documento) .contenido h3 { margin: 24px 0 8px; font-size: 1.25rem; }
-.guia-web:has(.portada-web--documento) .contenido ul { padding-left: 20px; }
-.guia-web:has(.portada-web--documento) .contenido li { margin-bottom: 6px; }
-.guia-web:has(.portada-web--documento) .contenido li::marker { color: var(--primario); }
-/* Pasos numerados: solo en una secuencia real, la lista ordenada. */
-.guia-web:has(.portada-web--documento) .contenido ol { counter-reset: paso; list-style: none; padding: 0; margin: 16px 0 24px; }
-.guia-web:has(.portada-web--documento) .contenido ol > li {
-  counter-increment: paso; position: relative; min-height: 36px; margin: 0 0 12px; padding: 4px 0 4px 52px;
+/* «Que quieres igualar» de alimentos: desplegable fuera de .eq-campo. */
+.guia-web .eq-criterio select { border: 1px solid var(--texto-sec); border-radius: 6px; }
+/* Lo escrito o elegido, en seminegrita y en tinta; el texto de ejemplo, en peso normal y gris:
+   asi se distingue de un vistazo una casilla vacia de una rellena (Mario, 2026-11-26). Las
+   etiquetas, en Inter 600 14 secundario en todas las guias, como fija la seccion 10. */
+.guia-web .eq-campo input, .guia-web .eq-campo select, .guia-web .eq-criterio select,
+.guia-web .calc-campo input[type="number"], .guia-web .calc-campo select,
+.guia-web .ir-categoria select, .guia-web .buscador input {
+  font-weight: 600; color: var(--tinta);
 }
-.guia-web:has(.portada-web--documento) .contenido ol > li::before {
-  content: counter(paso); position: absolute; left: 0; top: 0; width: 36px; height: 36px;
-  display: grid; place-items: center; border-radius: 50%; background: var(--tinta); color: var(--blanco);
-  font: 700 1.25rem/1 "Archivo Narrow", Inter, sans-serif;
+.guia-web .eq-campo input::placeholder, .guia-web .calc-campo input::placeholder,
+.guia-web .buscador input::placeholder {
+  font-weight: 400; color: var(--texto-sec); opacity: 1;
 }
-.guia-web:has(.portada-web--documento) .contenido ol > li:not(:last-child)::after {
-  content: ""; position: absolute; left: 17px; top: 36px; bottom: -12px; width: 2px; background: var(--filete);
+.guia-web .eq-campo label, .guia-web .eq-criterio label {
+  font-size: .875rem; font-weight: 600; color: var(--texto-sec);
 }
-@media (min-width: 768px) {
-  .guia-web .portada-web--documento h1 { font-size: 3rem; }
+.guia-web .eq-campo input:focus, .guia-web .eq-campo input:focus-visible,
+.guia-web .eq-campo select:focus, .guia-web .eq-campo select:focus-visible,
+.guia-web .calc-campo input[type="number"]:focus, .guia-web .calc-campo input[type="number"]:focus-visible,
+.guia-web .calc-campo select:focus, .guia-web .calc-campo select:focus-visible,
+.guia-web .ir-categoria select:focus, .guia-web .ir-categoria select:focus-visible,
+.guia-web .buscador input:focus, .guia-web .buscador input:focus-visible,
+.guia-web .eq-buscador-entrada input:focus, .guia-web .eq-buscador-entrada input:focus-visible,
+.guia-web .eq-criterio select:focus, .guia-web .eq-criterio select:focus-visible,
+.guia-web .indice a:focus-visible, .guia-web .eq-mas button:focus-visible {
+  /* Contorno transparente y no `none`: en alto contraste (forced-colors) la sombra desaparece
+     y el contorno se pinta con el color del sistema. */
+  outline: 2px solid transparent; border-color: var(--primario);
+  box-shadow: 0 0 0 1px var(--primario), 0 0 0 4px var(--primario-tenue);
 }
+/* El buscador de alimentos ya elegido conserva su borde magenta entero (Mario, 2026-11-26). */
+.guia-web .equivalencias .eq-confirmado .eq-buscador-entrada input { border-color: var(--primario); }
+/* Si se edita el origen con el destino ya elegido, el destino se desactiva: sin el magenta. */
+.guia-web .equivalencias .eq-buscador-entrada input:disabled { border-color: var(--texto-sec); }
+/* Desactivado: gris, borde discontinuo y un texto que dice que falta, en lugar de transparencia. */
+.guia-web .eq-buscador-entrada:has(input:disabled) { opacity: 1; }
+.guia-web .eq-buscador-entrada input:disabled {
+  background: var(--gris); border-style: dashed; color: var(--texto-sec); cursor: not-allowed;
+}
+.guia-web .eq-buscador-entrada input:disabled::placeholder { color: var(--texto-sec); }
+/* Selector de modo: carril gris sin borde; la opcion activa, blanca con el gris de referencia. */
+.guia-web .eq-modos button[aria-selected="true"] { border-color: var(--referencia); }
+.guia-web .calc .selector-objetivos {
+  display: flex; flex-wrap: nowrap; gap: 4px; margin: 0 0 16px; padding: 4px;
+  background: var(--gris); border: 0; border-radius: 8px;
+}
+.guia-web .calc .selector-objetivos button {
+  flex: 1; min-height: 44px; padding: 8px 12px;
+  font: 600 .875rem/1.2 Inter, system-ui, sans-serif; color: var(--texto-sec);
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+}
+.guia-web .calc .selector-objetivos button[aria-pressed="true"] {
+  background: var(--blanco); border-color: var(--referencia); color: var(--tinta);
+}
+/* Botones de categoria del supermercado (escritorio) y «Ver N mas» de las recomendaciones. */
+.guia-web .indice a, .guia-web .eq-mas button { border-color: var(--texto-sec); }
